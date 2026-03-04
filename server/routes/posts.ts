@@ -3,9 +3,11 @@ const postRouter = express.Router();
 import postsController from "../controllers/posts";
 import commentController from "../controllers/comment";
 import { authenticate } from "../middleware/auth";
+import { uploadImage } from "../middleware/upload";
 
 // All post routes require authentication
-postRouter.post("/", authenticate, postsController.createPost);
+// uploadImage runs first (saves file to disk), then authenticate checks token, then controller
+postRouter.post("/", uploadImage, authenticate, postsController.createPost);
 postRouter.get("/", authenticate, postsController.getPosts);
 postRouter.get("/:postId", authenticate, postsController.getPostById);
 postRouter.put("/:postId", authenticate, postsController.updatePostById);

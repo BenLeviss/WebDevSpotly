@@ -8,14 +8,6 @@
     background: #f7f7f7;
 }
 
-.auth-page-title {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 32px;
-    letter-spacing: -0.5px;
-}
-
 .auth-card {
     width: 100%;
     max-width: 390px;

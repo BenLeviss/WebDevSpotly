@@ -43,7 +43,6 @@ export default function AuthPage() {
 
     return (
         <div className="auth-page">
-            {mode === 'register' && <h1 className="auth-page-title">Sign Up</h1>}
 
             <div className="auth-card">
                 {/* Logo & Brand */}

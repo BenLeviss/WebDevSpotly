@@ -76,6 +76,8 @@ const updateUserById = async (req: Request, res: Response) => {
         if (firstName !== undefined) updateData.firstName = firstName;
         if (lastName !== undefined) updateData.lastName = lastName;
         if (bio !== undefined) updateData.bio = bio;
+        // If a new avatar was uploaded, store only the URL path
+        if (req.file) updateData.avatarUrl = `/uploads/${req.file.filename}`;
 
         const updatedUser = await User.findByIdAndUpdate(
             req.params.userId,

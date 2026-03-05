@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/auth/AuthPage';
 import AppLayout from './components/layout/AppLayout';
 import AddPlacePage from './pages/addPlace/AddPlacePage';
+import ProfilePage from './pages/profile/ProfilePage';
 
 // 🔐 ProtectedRoute — only lets logged-in users through.
 //    If not logged in → sends them to /login.
@@ -58,7 +59,7 @@ export default function App() {
           <Route path="/profile" element={
             <ProtectedRoute>
               <AppLayout>
-                <div>Profile (coming soon)</div>
+                <ProfilePage />
               </AppLayout>
             </ProtectedRoute>
           } />

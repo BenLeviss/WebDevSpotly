@@ -39,6 +39,9 @@ const userSchema: Schema = new Schema(
             type: String,
             maxlength: 500
         },
+        avatarUrl: {
+            type: String  // stores a path like "/uploads/avatar-123.jpg"
+        },
         refreshTokens: {
             type: [String],
             default: []

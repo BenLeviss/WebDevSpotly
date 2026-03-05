@@ -19,12 +19,12 @@ export const authApi = {
         api.post<AuthResponse>('/auth/register', { username, email, password }),
 
     logout: (refreshToken: string) =>
-        api.post('/auth/logout', null, {
+        api.post('/auth/logout', {}, {
             headers: { Authorization: `Bearer ${refreshToken}` }
         }),
 
     refresh: (refreshToken: string) =>
-        api.post<{ accessToken: string; refreshToken: string }>('/auth/refresh', null, {
+        api.post<{ accessToken: string; refreshToken: string }>('/auth/refresh', {}, {
             headers: { Authorization: `Bearer ${refreshToken}` }
         }),
 };

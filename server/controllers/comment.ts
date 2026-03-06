@@ -64,7 +64,7 @@ const updateCommentById = async (req: Request, res: Response) => {
         if ((comment.userId as any).toString() !== (req as any).user.userId) {
             return res.status(403).json({ error: "You can only update your own comments" });
         }
-        const updatedComment = await Comment.findByIdAndUpdate(commentId, { content }, { new: true }).populate('userId', 'username email');
+        const updatedComment = await Comment.findByIdAndUpdate(commentId, { content }, { returnDocument: 'after' }).populate('userId', 'username email');
         res.send(updatedComment);
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });

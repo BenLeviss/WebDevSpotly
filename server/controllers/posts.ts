@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import Post from "../models/post";
 
 const createPost = async (req: Request, res: Response) => {
@@ -22,8 +23,40 @@ const createPost = async (req: Request, res: Response) => {
 
 const getPosts = async (req: Request, res: Response) => {
     try {
-        const filter = req.query.userId ? { userId: req.query.userId } : {};
-        const posts = await Post.find(filter).populate('userId', 'username email');
+        const matchFilter = req.query.userId ? { userId: new mongoose.Types.ObjectId(req.query.userId as string) } : {};
+
+        const posts = await Post.aggregate([
+            { $match: matchFilter },
+            { $sort: { createdAt: -1 } },
+            // Lookup comment count for each post
+            {
+                $lookup: {
+                    from: 'comments',
+                    localField: '_id',
+                    foreignField: 'postId',
+                    as: 'commentsArr'
+                }
+            },
+            { $addFields: { commentCount: { $size: '$commentsArr' } } },
+            { $unset: 'commentsArr' },
+            // Populate userId
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userId',
+                    foreignField: '_id',
+                    as: 'userId'
+                }
+            },
+            { $unwind: '$userId' },
+            {
+                $project: {
+                    'userId.password': 0,
+                    'userId.refreshTokens': 0,
+                }
+            }
+        ]);
+
         res.send(posts);
     } catch (error) {
         res.status(500).send((error as Error).message);
@@ -32,7 +65,7 @@ const getPosts = async (req: Request, res: Response) => {
 
 const getPostById = async (req: Request, res: Response) => {
     try {
-        const post = await Post.findById(req.params.postId).populate('userId', 'username email');
+        const post = await Post.findById(req.params.postId).populate('userId', 'username email avatarUrl');
         if (post) res.send(post);
         else res.status(404).send("Post not found");
     } catch (error) {
@@ -57,7 +90,7 @@ const updatePostById = async (req: Request, res: Response) => {
         const updatedPost = await Post.findByIdAndUpdate(
             req.params.postId,
             req.body,
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
 
         res.send(updatedPost);
@@ -87,10 +120,35 @@ const deletePostById = async (req: Request, res: Response) => {
     }
 };
 
+const toggleLike = async (req: Request, res: Response) => {
+    try {
+        const post = await Post.findById(req.params.postId);
+        if (!post) return res.status(404).send("Post not found");
+
+        const userId = (req as any).user.userId;
+        const alreadyLiked = (post.likes as any[]).some(
+            (id: any) => id.toString() === userId
+        );
+
+        const updatedPost = await Post.findByIdAndUpdate(
+            req.params.postId,
+            alreadyLiked
+                ? { $pull: { likes: userId } }
+                : { $addToSet: { likes: userId } },
+            { returnDocument: 'after' }
+        ).populate('userId', 'username email avatarUrl');
+
+        res.send(updatedPost);
+    } catch (error) {
+        res.status(400).send((error as Error).message);
+    }
+};
+
 export default {
     createPost,
     getPosts,
     getPostById,
     updatePostById,
     deletePostById,
+    toggleLike,
 };

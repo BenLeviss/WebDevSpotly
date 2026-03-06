@@ -6,10 +6,13 @@ export interface Post {
     content: string;
     category?: string;
     imageUrl?: string;
+    likes: string[];
+    commentCount: number;
     userId: {
         _id: string;
         username: string;
         email: string;
+        avatarUrl?: string;
     };
     createdAt: string;
     updatedAt: string;
@@ -40,4 +43,5 @@ export const postsApi = {
     updatePost: (id: string, data: Partial<Pick<Post, 'title' | 'content'>>) =>
         api.put<Post>(`/post/${id}`, data),
     deletePost: (id: string) => api.delete(`/post/${id}`),
+    toggleLike: (id: string) => api.post<Post>(`/post/${id}/like`),
 };

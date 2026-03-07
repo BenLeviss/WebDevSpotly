@@ -1,0 +1,151 @@
+/* ── Edit Place Page ── */
+/* Reuses .add-place-* classes from AddPlacePage.css — only additions here */
+
+.edit-place-page {
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Header with back arrow ── */
+.edit-place-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 20px 14px;
+}
+
+.edit-back-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background 0.15s ease;
+}
+
+.edit-back-btn:hover {
+    background: var(--primary-ultra-light);
+}
+
+.edit-place-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+/* ── Loading / Error states ── */
+.edit-place-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40vh;
+}
+
+.edit-place-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e0e0e0;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: editSpin 0.7s linear infinite;
+}
+
+@keyframes editSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.edit-place-error {
+    text-align: center;
+    padding: 40px 20px;
+    color: #c0392b;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* ── Current image preview with change overlay ── */
+.current-image-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 160px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.current-image-wrap img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+}
+
+.image-change-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.current-image-wrap:hover .image-change-overlay {
+    opacity: 1;
+}
+
+.image-change-overlay svg {
+    width: 28px;
+    height: 28px;
+    stroke: #fff;
+}
+
+.image-change-overlay span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* ── Save / Update button — inherits .share-btn style, just color tweaks ── */
+.save-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-pill);
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 150, 136, 0.3);
+    transition: background 0.15s ease, transform 0.1s, box-shadow 0.15s ease;
+}
+
+.save-btn:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 150, 136, 0.4);
+}
+
+.save-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.save-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}

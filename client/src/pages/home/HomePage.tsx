@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './HomePage.css';
 import { postsApi } from '../../api/posts';
 import type { Post } from '../../api/posts';
-import { commentsApi } from '../../api/comments';
-import type { Comment } from '../../api/comments';
 import { useAuth } from '../../context/AuthContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -31,11 +29,7 @@ interface PlaceCardProps {
 }
 
 function PlaceCard({ post, currentUserId, onLikeToggle }: PlaceCardProps) {
-    const [commentsOpen, setCommentsOpen] = useState(false);
-    const [comments, setComments] = useState<Comment[]>([]);
-    const [commentsLoaded, setCommentsLoaded] = useState(false);
-    const [commentText, setCommentText] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+    const navigate = useNavigate();
     // Prevent double-fire from double-click or React StrictMode
     const likingRef = useRef(false);
 
@@ -49,39 +43,6 @@ function PlaceCard({ post, currentUserId, onLikeToggle }: PlaceCardProps) {
 
     const avatarUrl = userObj.avatarUrl ?? null;
     const initial = userObj.username?.charAt(0).toUpperCase() || '?';
-
-    const loadComments = useCallback(async () => {
-        if (commentsLoaded) return;
-        try {
-            const { data } = await commentsApi.getComments(post._id);
-            setComments(data);
-            setCommentsLoaded(true);
-        } catch (e) {
-            console.error(e);
-        }
-    }, [post._id, commentsLoaded]);
-
-    const handleToggleComments = () => {
-        const next = !commentsOpen;
-        setCommentsOpen(next);
-        if (next) loadComments();
-    };
-
-    const handleAddComment = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const trimmed = commentText.trim();
-        if (!trimmed || submitting) return;
-        setSubmitting(true);
-        try {
-            const { data } = await commentsApi.addComment(post._id, trimmed);
-            setComments(prev => [...prev, data]);
-            setCommentText('');
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setSubmitting(false);
-        }
-    };
 
     return (
         <article className="place-card">
@@ -130,14 +91,14 @@ function PlaceCard({ post, currentUserId, onLikeToggle }: PlaceCardProps) {
                 </button>
 
                 <button
-                    className={`action-btn comment-btn${commentsOpen ? ' open' : ''}`}
-                    onClick={handleToggleComments}
-                    aria-label="Toggle comments"
+                    className="action-btn comment-btn"
+                    onClick={() => navigate(`/post/${post._id}/comments`)}
+                    aria-label="View comments"
                 >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
-                    <span>{commentsLoaded ? comments.length : (post.commentCount ?? 0)}</span>
+                    <span>{post.commentCount ?? 0}</span>
                 </button>
             </div>
 
@@ -157,40 +118,6 @@ function PlaceCard({ post, currentUserId, onLikeToggle }: PlaceCardProps) {
                     <p className="card-content">{post.content}</p>
                 )}
             </div>
-
-            {/* Comments panel */}
-            {commentsOpen && (
-                <div className="comments-panel">
-                    {comments.length === 0 && commentsLoaded && (
-                        <p className="no-comments">No comments yet. Be the first!</p>
-                    )}
-                    <ul className="comments-list">
-                        {comments.map(c => (
-                            <li key={c._id} className="comment-item">
-                                <span className="comment-author">{c.userId.username}</span>
-                                <span className="comment-text">{c.content}</span>
-                            </li>
-                        ))}
-                    </ul>
-                    <form className="comment-form" onSubmit={handleAddComment}>
-                        <input
-                            className="comment-input"
-                            type="text"
-                            placeholder="Add a comment…"
-                            value={commentText}
-                            onChange={e => setCommentText(e.target.value)}
-                            disabled={submitting}
-                        />
-                        <button
-                            type="submit"
-                            className="comment-submit"
-                            disabled={!commentText.trim() || submitting}
-                        >
-                            Post
-                        </button>
-                    </form>
-                </div>
-            )}
         </article>
     );
 }
@@ -202,17 +129,58 @@ export default function HomePage() {
     const location = useLocation();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(true);
 
-    // Re-fetch whenever we land on this page (including after navigate('/', { state: { refresh } }))
+    const PAGE_SIZE = 5;
+
+    // Sentinel ref for infinite scroll
+    const sentinelRef = useRef<HTMLDivElement>(null);
+
+    // Reset & fetch first page whenever we land on this page
     useEffect(() => {
         setLoading(true);
         setError(null);
-        postsApi.getPosts()
-            .then(({ data }) => setPosts(data))
+        setPosts([]);
+        setHasMore(true);
+        postsApi.getPosts(0, PAGE_SIZE)
+            .then(({ data }) => {
+                setPosts(data);
+                if (data.length < PAGE_SIZE) setHasMore(false);
+            })
             .catch(() => setError('Could not load posts.'))
             .finally(() => setLoading(false));
     }, [location.key]);
+
+    // Load more posts (appends to existing list)
+    const loadMore = useCallback(async () => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
+        try {
+            const { data } = await postsApi.getPosts(posts.length, PAGE_SIZE);
+            setPosts(prev => [...prev, ...data]);
+            if (data.length < PAGE_SIZE) setHasMore(false);
+        } catch {
+            // silently fail on load-more
+        } finally {
+            setLoadingMore(false);
+        }
+    }, [posts.length, loadingMore, hasMore]);
+
+    // IntersectionObserver — triggers loadMore when sentinel becomes visible
+    useEffect(() => {
+        if (loading || !hasMore) return;
+        const sentinel = sentinelRef.current;
+        if (!sentinel) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => { if (entry.isIntersecting) loadMore(); },
+            { rootMargin: '200px' }
+        );
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [loading, hasMore, loadMore]);
 
     // Optimistic like toggle
     const handleLikeToggle = useCallback(async (postId: string) => {
@@ -233,8 +201,6 @@ export default function HomePage() {
 
         try {
             await postsApi.toggleLike(postId);
-            // Don't re-set state from server response — optimistic update is already correct
-            // and syncing would cause a visible flicker/double-count
         } catch {
             // Revert on error
             setPosts(prev => prev.map(p => {
@@ -294,6 +260,13 @@ export default function HomePage() {
                     />
                 ))}
             </div>
+
+            {/* Sentinel for infinite scroll — triggers next page load */}
+            {!loading && hasMore && (
+                <div ref={sentinelRef} className="home-loading" style={{ padding: '20px 0' }}>
+                    {loadingMore && <div className="home-spinner" />}
+                </div>
+            )}
         </div>
     );
 }

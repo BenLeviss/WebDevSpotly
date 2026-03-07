@@ -25,9 +25,19 @@ const getPosts = async (req: Request, res: Response) => {
     try {
         const matchFilter = req.query.userId ? { userId: new mongoose.Types.ObjectId(req.query.userId as string) } : {};
 
-        const posts = await Post.aggregate([
+        // Pagination — optional skip & limit query params
+        const skip = parseInt(req.query.skip as string) || 0;
+        const limit = parseInt(req.query.limit as string) || 0; // 0 = no limit
+
+        const pipeline: any[] = [
             { $match: matchFilter },
             { $sort: { createdAt: -1 } },
+        ];
+
+        if (skip > 0) pipeline.push({ $skip: skip });
+        if (limit > 0) pipeline.push({ $limit: limit });
+
+        pipeline.push(
             // Lookup comment count for each post
             {
                 $lookup: {
@@ -55,7 +65,9 @@ const getPosts = async (req: Request, res: Response) => {
                     'userId.refreshTokens': 0,
                 }
             }
-        ]);
+        );
+
+        const posts = await Post.aggregate(pipeline);
 
         res.send(posts);
     } catch (error) {
@@ -87,9 +99,15 @@ const updatePostById = async (req: Request, res: Response) => {
             });
         }
 
+        // Build update payload — include new imageUrl if a file was uploaded
+        const updateData: any = { ...req.body };
+        if (req.file) {
+            updateData.imageUrl = `/uploads/${req.file.filename}`;
+        }
+
         const updatedPost = await Post.findByIdAndUpdate(
             req.params.postId,
-            req.body,
+            updateData,
             { returnDocument: 'after', runValidators: true }
         );
 

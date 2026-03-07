@@ -19,7 +19,9 @@ export interface Post {
 }
 
 export const postsApi = {
-    getPosts: () => api.get<Post[]>('/post'),
+    getPosts: (skip = 0, limit = 0) =>
+        api.get<Post[]>('/post', { params: { skip, limit } }),
+    getMyPosts: (userId: string) => api.get<Post[]>(`/post?userId=${userId}`),
     getPostById: (id: string) => api.get<Post>(`/post/${id}`),
 
     // createPost now accepts an optional image File.
@@ -40,8 +42,17 @@ export const postsApi = {
         });
     },
 
-    updatePost: (id: string, data: Partial<Pick<Post, 'title' | 'content'>>) =>
-        api.put<Post>(`/post/${id}`, data),
+    updatePost: (id: string, title: string, content: string, category: string, image?: File | null) => {
+        const form = new FormData();
+        form.append('title', title);
+        form.append('content', content);
+        form.append('category', category);
+        if (image) form.append('image', image);
+
+        return api.put<Post>(`/post/${id}`, form, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+    },
     deletePost: (id: string) => api.delete(`/post/${id}`),
     toggleLike: (id: string) => api.post<Post>(`/post/${id}/like`),
 };

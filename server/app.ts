@@ -4,6 +4,7 @@ dotenv.config();
 import express, { Express } from "express";
 import mongoose from "mongoose";
 import cors from "cors";
+import path from "path";
 
 import postRouter from "./routes/posts";
 import commentRouter from "./routes/comment";
@@ -28,7 +29,12 @@ const promise = new Promise<Express>((resolve, reject) => {
             }));
 
             app.use(express.json());
-            app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+            app.use(express.urlencoded({ extended: true, limit: '11mb' }));
+
+            // Serve uploaded images as static files.
+            // A saved path like "/uploads/photo-123.jpg" becomes accessible
+            // at http://localhost:3000/uploads/photo-123.jpg
+            app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
             app.use("/auth", authRouter);
             app.use("/post", postRouter);

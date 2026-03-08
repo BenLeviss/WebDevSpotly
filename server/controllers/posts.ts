@@ -3,9 +3,16 @@ import Post from "../models/post";
 
 const createPost = async (req: Request, res: Response) => {
     try {
+        // req.file is set by multer when a file is uploaded.
+        // We only store the relative URL path, not the file binary.
+        const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+
         const post = await Post.create({
-            ...req.body,
-            userId: (req as any).user.userId
+            title: req.body.title,
+            content: req.body.content,
+            category: req.body.category,
+            imageUrl,
+            userId: (req as any).user.userId,
         });
         res.status(201).send(post);
     } catch (error) {

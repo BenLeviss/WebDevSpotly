@@ -1,0 +1,203 @@
+/* ---- Add Place Page ---- */
+.add-place-page {
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.add-place-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 20px 12px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+}
+
+.back-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background var(--transition);
+}
+
+.back-btn:hover {
+    background: var(--primary-ultra-light);
+}
+
+.add-place-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Form */
+.add-place-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px 20px 32px;
+    max-width: 560px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.field-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Shared input / select / textarea base */
+.field-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: #f2f2f2;
+    border: 1.5px solid transparent;
+    border-radius: var(--radius-pill);
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.field-input::placeholder {
+    color: var(--text-muted);
+}
+
+.field-input:focus {
+    border-color: var(--primary-light);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.1);
+}
+
+/* Select arrow styling */
+.field-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2390a4ae' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+    cursor: pointer;
+}
+
+/* Textarea overrides */
+.field-textarea {
+    border-radius: var(--radius-md);
+    resize: none;
+    line-height: 1.6;
+}
+
+.char-count {
+    align-self: flex-end;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: -4px;
+}
+
+/* Photo Upload Area */
+.photo-upload-area {
+    width: 100%;
+    min-height: 160px;
+    border: 2px dashed #ccd9d7;
+    border-radius: var(--radius-md);
+    background: #f7fafa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color var(--transition), background var(--transition);
+    overflow: hidden;
+}
+
+.photo-upload-area:hover {
+    border-color: var(--primary-light);
+    background: var(--primary-ultra-light);
+}
+
+.upload-icon {
+    font-size: 28px;
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+.upload-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.upload-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Image preview fills the upload area */
+.photo-preview {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+}
+
+/* Error */
+.add-place-error {
+    background: #fde8e8;
+    border: 1px solid #f5a5a5;
+    color: #c0392b;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* Submit Button */
+.share-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-pill);
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 150, 136, 0.3);
+    transition: background var(--transition), transform 0.1s, box-shadow var(--transition);
+}
+
+.share-btn:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 150, 136, 0.4);
+}
+
+.share-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.share-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}

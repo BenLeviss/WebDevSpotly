@@ -64,6 +64,11 @@
     color: var(--text-primary);
 }
 
+.required-star {
+    color: #e74c3c;
+    margin-left: 2px;
+}
+
 /* Shared input / select / textarea base */
 .field-input {
     width: 100%;

@@ -47,6 +47,14 @@ export default function AddPlacePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); // stops the page from reloading (default form behaviour)
         if (!name.trim()) return;
+        if (!photo) {
+            setError('Please upload a photo.');
+            return;
+        }
+        if (!category) {
+            setError('Please select a category.');
+            return;
+        }
         setError('');
         setLoading(true);
 
@@ -67,7 +75,7 @@ export default function AddPlacePage() {
 
                 {/* ── Photo Upload ── */}
                 <section className="form-section">
-                    <label className="field-label">Photo</label>
+                    <label className="field-label">Photo <span className="required-star">*</span></label>
 
                     {/* Hidden real file input — we trigger it from the styled area below */}
                     <input
@@ -113,7 +121,7 @@ export default function AddPlacePage() {
 
                 {/* ── Category ── */}
                 <section className="form-section">
-                    <label className="field-label" htmlFor="place-category">Category</label>
+                    <label className="field-label" htmlFor="place-category">Category <span className="required-star">*</span></label>
                     <select
                         id="place-category"
                         className="field-input field-select"
@@ -152,7 +160,7 @@ export default function AddPlacePage() {
                     id="share-place-btn"
                     className="share-btn"
                     type="submit"
-                    disabled={loading || !name.trim()}
+                    disabled={loading || !name.trim() || !photo || !category}
                 >
                     {loading ? 'Sharing…' : 'Share This Place'}
                 </button>

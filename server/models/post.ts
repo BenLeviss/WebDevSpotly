@@ -12,7 +12,12 @@ const postSchema: Schema = new Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
-        }
+        },
+        // Array of user IDs who liked this post
+        likes: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }]
     },
     { timestamps: true }
 );

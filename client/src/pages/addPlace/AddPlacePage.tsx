@@ -53,7 +53,7 @@ export default function AddPlacePage() {
         try {
             // Send to the server — title, description as content, category, and the photo file
             await postsApi.createPost(name.trim(), description.trim(), category, photo);
-            navigate('/');
+            navigate('/', { state: { refresh: Date.now() } });
         } catch (err: any) {
             setError(err.response?.data?.error || 'Failed to share place.');
             setLoading(false);
@@ -62,14 +62,6 @@ export default function AddPlacePage() {
 
     return (
         <div className="add-place-page">
-
-            {/* ── Header ── */}
-            <header className="add-place-header">
-                <button className="back-btn" onClick={() => navigate(-1)} aria-label="Go back">
-                    ←
-                </button>
-                <h1 className="add-place-title">Add New Place</h1>
-            </header>
 
             <form className="add-place-form" onSubmit={handleSubmit}>
 

@@ -17,4 +17,7 @@ postRouter.delete("/:postId", authenticate, postsController.deletePostById);
 postRouter.post("/:postId/comment", authenticate, commentController.createComment);
 postRouter.get("/:postId/comment", authenticate, commentController.getCommentsByPost);
 
+// Like toggle route
+postRouter.post("/:postId/like", authenticate, postsController.toggleLike);
+
 export default postRouter;

@@ -5,12 +5,13 @@ import AuthPage from './pages/auth/AuthPage';
 import AppLayout from './components/layout/AppLayout';
 import AddPlacePage from './pages/addPlace/AddPlacePage';
 import ProfilePage from './pages/profile/ProfilePage';
+import HomePage from './pages/home/HomePage';
 
 // 🔐 ProtectedRoute — only lets logged-in users through.
-//    If not logged in → sends them to /login.
+//    If not logged in (no user OR no token) → sends them to /login.
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  const { user, accessToken } = useAuth();
+  return user && accessToken ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
 // 🔓 PublicRoute — only renders for guests (not logged in).
@@ -38,7 +39,7 @@ export default function App() {
           <Route path="/" element={
             <ProtectedRoute>
               <AppLayout>
-                <div>Home (coming soon)</div>
+                <HomePage />
               </AppLayout>
             </ProtectedRoute>
           } />

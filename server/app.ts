@@ -34,7 +34,7 @@ const promise = new Promise<Express>((resolve, reject) => {
             // Serve uploaded images as static files.
             // A saved path like "/uploads/photo-123.jpg" becomes accessible
             // at http://localhost:3000/uploads/photo-123.jpg
-            app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+            app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
             app.use("/auth", authRouter);
             app.use("/post", postRouter);

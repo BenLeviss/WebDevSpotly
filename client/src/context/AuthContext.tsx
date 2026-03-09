@@ -12,13 +12,26 @@ interface AuthContextType {
     user: User | null;
     accessToken: string | null;
     refreshToken: string | null;
-    isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
     register: (username: string, email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+// ── Module-level callback so the axios interceptor can clear auth state ──
+// The interceptor runs outside React's component tree, so we use a callback
+// that AuthProvider registers on mount and cleans up on unmount.
+let onAuthExpired: (() => void) | null = null;
+
+export const setOnAuthExpired = (cb: (() => void) | null) => {
+    onAuthExpired = cb;
+};
+
+/** Call this from the axios interceptor when tokens are irrecoverably expired. */
+export const triggerAuthExpired = () => {
+    if (onAuthExpired) onAuthExpired();
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(() => {
@@ -31,7 +44,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [refreshToken, setRefreshToken] = useState<string | null>(
         () => localStorage.getItem('refreshToken')
     );
-    const [isLoading, setIsLoading] = useState(false);
 
     const saveAuth = (user: User, access: string, refresh: string) => {
         setUser(user);
@@ -51,24 +63,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('refreshToken');
     };
 
+    // Register clearAuth so the axios interceptor can trigger it
+    useEffect(() => {
+        setOnAuthExpired(clearAuth);
+        return () => setOnAuthExpired(null);
+    }, []);
+
     const login = async (email: string, password: string) => {
-        setIsLoading(true);
-        try {
-            const { data } = await authApi.login(email, password);
-            saveAuth(data.user, data.accessToken, data.refreshToken);
-        } finally {
-            setIsLoading(false);
-        }
+        const { data } = await authApi.login(email, password);
+        saveAuth(data.user, data.accessToken, data.refreshToken);
     };
 
     const register = async (username: string, email: string, password: string) => {
-        setIsLoading(true);
-        try {
-            const { data } = await authApi.register(username, email, password);
-            saveAuth(data.user, data.accessToken, data.refreshToken);
-        } finally {
-            setIsLoading(false);
-        }
+        const { data } = await authApi.register(username, email, password);
+        saveAuth(data.user, data.accessToken, data.refreshToken);
     };
 
     const logout = async () => {
@@ -84,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, accessToken, refreshToken, isLoading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, accessToken, refreshToken, login, register, logout }}>
             {children}
         </AuthContext.Provider>
     );

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { triggerAuthExpired } from '../context/AuthContext';
 
 const api = axios.create({
     baseURL: '/api',
@@ -16,13 +17,20 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Response interceptor — handle 401 by refreshing token
+// Response interceptor — handle 401/403 by refreshing token
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        const status = error.response?.status;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Skip refresh logic for auth endpoints — a 401/403 on login/register/refresh
+        // should just be treated as a plain error, not a token refresh trigger.
+        const isAuthEndpoint = originalRequest?.url?.includes('/auth/');
+
+        // The server returns 401 when no token is sent, and 403 when the token is
+        // expired/invalid. Both cases should trigger a token refresh attempt.
+        if ((status === 401 || status === 403) && !originalRequest._retry && !isAuthEndpoint) {
             originalRequest._retry = true;
 
             try {
@@ -40,10 +48,12 @@ api.interceptors.response.use(
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return api(originalRequest);
             } catch {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                localStorage.removeItem('user');
-                window.location.href = '/login';
+                // Both tokens are expired/invalid — clear React auth state.
+                // This sets user to null, which makes ProtectedRoute redirect to /login.
+                triggerAuthExpired();
+                // Return a pending promise so the error doesn't reach the component
+                // (the page will unmount via ProtectedRoute redirect anyway).
+                return new Promise(() => { });
             }
         }
 

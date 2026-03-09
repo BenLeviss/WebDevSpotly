@@ -1,16 +1,26 @@
 import './ProfilePage.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { userApi } from '../../api/user';
 import type { UserProfile } from '../../api/user';
 
 export default function ProfilePage() {
-    const { user, logout } = useAuth();
+    const { user, logout, updateUser } = useAuth();
     const navigate = useNavigate();
 
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
+
+    // ── Edit-mode state ──
+    const [editing, setEditing] = useState(false);
+    const [editUsername, setEditUsername] = useState('');
+    const [editBio, setEditBio] = useState('');
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!user) return;
@@ -20,14 +30,81 @@ export default function ProfilePage() {
             .finally(() => setLoading(false));
     }, [user]);
 
+    // ── Handlers ──
+
     const handleLogout = async () => {
         await logout();
         navigate('/login');
     };
 
-    const avatarSrc = profile?.avatarUrl
-        ? `http://localhost:3000${profile.avatarUrl}`
-        : null;
+    const enterEditMode = () => {
+        setEditUsername(profile?.username || '');
+        setEditBio(profile?.bio || '');
+        setAvatarFile(null);
+        setAvatarPreview(null);
+        setError('');
+        setEditing(true);
+    };
+
+    const cancelEdit = () => {
+        setEditing(false);
+        setAvatarFile(null);
+        setAvatarPreview(null);
+        setError('');
+    };
+
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
+    };
+
+    const handleSave = async () => {
+        if (!user || !profile) return;
+
+        const trimmedUsername = editUsername.trim();
+        if (!trimmedUsername) {
+            setError('Username cannot be empty.');
+            return;
+        }
+
+        setSaving(true);
+        setError('');
+
+        try {
+            const formData = new FormData();
+            formData.append('username', trimmedUsername);
+            formData.append('bio', editBio);
+            if (avatarFile) {
+                formData.append('image', avatarFile);
+            }
+
+            const { data } = await userApi.updateUser(user._id, formData);
+
+            // Sync local state
+            setProfile(data);
+            updateUser({ username: data.username, avatarUrl: data.avatarUrl });
+            setEditing(false);
+        } catch (err: any) {
+            const msg = err.response?.data?.error || 'Failed to update profile.';
+            setError(msg);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ── Derived values ──
+
+    const displayAvatarSrc = editing && avatarPreview
+        ? avatarPreview
+        : profile?.avatarUrl
+            ? `http://localhost:3000${profile.avatarUrl}`
+            : null;
 
     const initial = profile?.username?.charAt(0).toUpperCase() || '?';
 
@@ -52,14 +129,41 @@ export default function ProfilePage() {
 
                 {/* Avatar + Name */}
                 <div className="profile-hero">
-                    <div className="avatar-wrap">
-                        {avatarSrc
-                            ? <img src={avatarSrc} alt="avatar" className="avatar-img" />
+                    <div
+                        className={`avatar-wrap${editing ? ' avatar-editable' : ''}`}
+                        onClick={editing ? handleAvatarClick : undefined}
+                        title={editing ? 'Change profile picture' : undefined}
+                    >
+                        {displayAvatarSrc
+                            ? <img src={displayAvatarSrc} alt="avatar" className="avatar-img" />
                             : <div className="avatar-placeholder">{initial}</div>
                         }
+                        {editing && (
+                            <div className="avatar-overlay">
+                                <span className="avatar-overlay-icon">📷</span>
+                            </div>
+                        )}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png"
+                            onChange={handleFileChange}
+                            className="avatar-file-input"
+                        />
                     </div>
-                    <h2 className="profile-username">{profile?.username}</h2>
 
+                    {editing ? (
+                        <input
+                            type="text"
+                            className="edit-username-input"
+                            value={editUsername}
+                            onChange={(e) => setEditUsername(e.target.value)}
+                            placeholder="Username"
+                            maxLength={30}
+                        />
+                    ) : (
+                        <h2 className="profile-username">{profile?.username}</h2>
+                    )}
                 </div>
 
                 <div className="profile-divider" />
@@ -67,20 +171,59 @@ export default function ProfilePage() {
                 {/* About / Bio */}
                 <section className="profile-section">
                     <h3 className="profile-section-title">About</h3>
-                    <p className="profile-bio">{profile?.bio || 'No bio yet.'}</p>
+                    {editing ? (
+                        <textarea
+                            className="edit-bio-textarea"
+                            value={editBio}
+                            onChange={(e) => setEditBio(e.target.value)}
+                            placeholder="Write something about yourself…"
+                            maxLength={500}
+                            rows={4}
+                        />
+                    ) : (
+                        <p className="profile-bio">{profile?.bio || 'No bio yet.'}</p>
+                    )}
                 </section>
 
                 <div className="profile-divider" />
 
+                {/* Error message */}
+                {error && <p className="profile-error">{error}</p>}
+
                 {/* Action buttons */}
                 <div className="profile-actions">
-                    <button className="btn-edit-profile">
-                        Edit Profile
-                    </button>
-                    <button className="btn-logout-profile" onClick={handleLogout}>
-                        <span className="logout-icon">⇥</span>
-                        Logout
-                    </button>
+                    {editing ? (
+                        <>
+                            <button
+                                className="btn-save-profile"
+                                onClick={handleSave}
+                                disabled={saving}
+                            >
+                                {saving ? (
+                                    <span className="btn-saving-spinner" />
+                                ) : (
+                                    'Save'
+                                )}
+                            </button>
+                            <button
+                                className="btn-cancel-profile"
+                                onClick={cancelEdit}
+                                disabled={saving}
+                            >
+                                Cancel
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button className="btn-edit-profile" onClick={enterEditMode}>
+                                Edit Profile
+                            </button>
+                            <button className="btn-logout-profile" onClick={handleLogout}>
+                                <span className="logout-icon">⇥</span>
+                                Logout
+                            </button>
+                        </>
+                    )}
                 </div>
 
             </div>

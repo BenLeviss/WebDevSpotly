@@ -10,7 +10,7 @@ import { uploadImage } from "../middleware/upload";
 postRouter.post("/", uploadImage, authenticate, postsController.createPost);
 postRouter.get("/", authenticate, postsController.getPosts);
 postRouter.get("/:postId", authenticate, postsController.getPostById);
-postRouter.put("/:postId", authenticate, postsController.updatePostById);
+postRouter.put("/:postId", uploadImage, authenticate, postsController.updatePostById);
 postRouter.delete("/:postId", authenticate, postsController.deletePostById);
 
 // Comment routes under posts

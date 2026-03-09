@@ -6,6 +6,9 @@ import AppLayout from './components/layout/AppLayout';
 import AddPlacePage from './pages/addPlace/AddPlacePage';
 import ProfilePage from './pages/profile/ProfilePage';
 import HomePage from './pages/home/HomePage';
+import MyPlacesPage from './pages/myPlaces/MyPlacesPage';
+import EditPlacePage from './pages/editPlace/EditPlacePage';
+import PostCommentsPage from './pages/postComments/PostCommentsPage';
 
 // 🔐 ProtectedRoute — only lets logged-in users through.
 //    If not logged in (no user OR no token) → sends them to /login.
@@ -53,7 +56,21 @@ export default function App() {
           <Route path="/places" element={
             <ProtectedRoute>
               <AppLayout>
-                <div>My Places (coming soon)</div>
+                <MyPlacesPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/places/:postId/edit" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <EditPlacePage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/post/:postId/comments" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PostCommentsPage />
               </AppLayout>
             </ProtectedRoute>
           } />

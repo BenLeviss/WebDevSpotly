@@ -3,6 +3,9 @@ import User from "../models/user";
 import Post from "../models/post";
 import Comment from "../models/comment";
 
+/** Locally typed authenticated request — user is set by the authenticate middleware. */
+type RequestWithUser = Request & { user: { userId: string; username: string; email: string } };
+
 const createUser = async (req: Request, res: Response) => {
     try {
         const { username, email, password } = req.body;
@@ -62,21 +65,21 @@ const getUserById = async (req: Request, res: Response) => {
 
 const updateUserById = async (req: Request, res: Response) => {
     try {
-        if (req.params.userId !== (req as any).user.userId) {
+        const { user } = req as RequestWithUser;
+        if (req.params.userId !== user.userId) {
             return res.status(403).json({
                 error: "You can only update your own profile"
             });
         }
 
         const { username, email, firstName, lastName, bio } = req.body;
-        const updateData: any = {};
+        const updateData: Record<string, unknown> = {};
 
         if (username) updateData.username = username;
         if (email) updateData.email = email;
         if (firstName !== undefined) updateData.firstName = firstName;
         if (lastName !== undefined) updateData.lastName = lastName;
         if (bio !== undefined) updateData.bio = bio;
-        // If a new avatar was uploaded, store only the URL path
         if (req.file) updateData.avatarUrl = `/uploads/${req.file.filename}`;
 
         const updatedUser = await User.findByIdAndUpdate(
@@ -97,19 +100,20 @@ const updateUserById = async (req: Request, res: Response) => {
 
 const deleteUserById = async (req: Request, res: Response) => {
     try {
-        if (req.params.userId !== (req as any).user.userId) {
+        const { user } = req as RequestWithUser;
+        if (req.params.userId !== user.userId) {
             return res.status(403).json({
                 error: "You can only delete your own account"
             });
         }
 
-        const user = await User.findByIdAndDelete(req.params.userId).select('-password');
+        const deletedUser = await User.findByIdAndDelete(req.params.userId).select('-password');
 
-        if (!user) {
+        if (!deletedUser) {
             return res.status(404).json({ error: "User not found" });
         }
 
-        res.json({ message: "User deleted successfully", user });
+        res.json({ message: "User deleted successfully", user: deletedUser });
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });
     }

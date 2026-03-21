@@ -2,10 +2,41 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Post from "../models/post";
 
+/** Locally typed authenticated request — user is set by the authenticate middleware. */
+type RequestWithUser = Request & { user: { userId: string; username: string; email: string } };
+
+/** Aggregation pipeline stages used in getPosts */
+interface LookupStage {
+    $lookup: {
+        from: string;
+        localField: string;
+        foreignField: string;
+        as: string;
+    };
+}
+interface MatchStage { $match: Record<string, unknown>; }
+interface SortStage { $sort: Record<string, 1 | -1>; }
+interface SkipStage { $skip: number; }
+interface LimitStage { $limit: number; }
+interface AddFieldsStage { $addFields: Record<string, unknown>; }
+interface UnsetStage { $unset: string; }
+interface UnwindStage { $unwind: string; }
+interface ProjectStage { $project: Record<string, unknown>; }
+
+type PipelineStage =
+    | LookupStage
+    | MatchStage
+    | SortStage
+    | SkipStage
+    | LimitStage
+    | AddFieldsStage
+    | UnsetStage
+    | UnwindStage
+    | ProjectStage;
+
 const createPost = async (req: Request, res: Response) => {
     try {
-        // req.file is set by multer when a file is uploaded.
-        // We only store the relative URL path, not the file binary.
+        const { user } = req as RequestWithUser;
         const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
 
         const post = await Post.create({
@@ -13,7 +44,7 @@ const createPost = async (req: Request, res: Response) => {
             content: req.body.content,
             category: req.body.category,
             imageUrl,
-            userId: (req as any).user.userId,
+            userId: user.userId,
         });
         res.status(201).send(post);
     } catch (error) {
@@ -23,13 +54,14 @@ const createPost = async (req: Request, res: Response) => {
 
 const getPosts = async (req: Request, res: Response) => {
     try {
-        const matchFilter = req.query.userId ? { userId: new mongoose.Types.ObjectId(req.query.userId as string) } : {};
+        const matchFilter: Record<string, unknown> = req.query.userId
+            ? { userId: new mongoose.Types.ObjectId(req.query.userId as string) }
+            : {};
 
-        // Pagination — optional skip & limit query params
         const skip = parseInt(req.query.skip as string) || 0;
-        const limit = parseInt(req.query.limit as string) || 0; // 0 = no limit
+        const limit = parseInt(req.query.limit as string) || 0;
 
-        const pipeline: any[] = [
+        const pipeline: PipelineStage[] = [
             { $match: matchFilter },
             { $sort: { createdAt: -1 } },
         ];
@@ -38,7 +70,6 @@ const getPosts = async (req: Request, res: Response) => {
         if (limit > 0) pipeline.push({ $limit: limit });
 
         pipeline.push(
-            // Lookup comment count for each post
             {
                 $lookup: {
                     from: 'comments',
@@ -49,7 +80,6 @@ const getPosts = async (req: Request, res: Response) => {
             },
             { $addFields: { commentCount: { $size: '$commentsArr' } } },
             { $unset: 'commentsArr' },
-            // Populate userId
             {
                 $lookup: {
                     from: 'users',
@@ -68,7 +98,6 @@ const getPosts = async (req: Request, res: Response) => {
         );
 
         const posts = await Post.aggregate(pipeline);
-
         res.send(posts);
     } catch (error) {
         res.status(500).send((error as Error).message);
@@ -87,20 +116,18 @@ const getPostById = async (req: Request, res: Response) => {
 
 const updatePostById = async (req: Request, res: Response) => {
     try {
+        const { user } = req as RequestWithUser;
         const post = await Post.findById(req.params.postId);
 
         if (!post) {
             return res.status(404).send("Post not found");
         }
 
-        if ((post.userId as any).toString() !== (req as any).user.userId) {
-            return res.status(403).json({
-                error: "You can only update your own posts"
-            });
+        if (String(post.userId) !== user.userId) {
+            return res.status(403).json({ error: "You can only update your own posts" });
         }
 
-        // Build update payload — include new imageUrl if a file was uploaded
-        const updateData: any = { ...req.body };
+        const updateData: Record<string, unknown> = { ...req.body };
         if (req.file) {
             updateData.imageUrl = `/uploads/${req.file.filename}`;
         }
@@ -119,16 +146,15 @@ const updatePostById = async (req: Request, res: Response) => {
 
 const deletePostById = async (req: Request, res: Response) => {
     try {
+        const { user } = req as RequestWithUser;
         const post = await Post.findById(req.params.postId);
 
         if (!post) {
             return res.status(404).send("Post not found");
         }
 
-        if ((post.userId as any).toString() !== (req as any).user.userId) {
-            return res.status(403).json({
-                error: "You can only delete your own posts"
-            });
+        if (String(post.userId) !== user.userId) {
+            return res.status(403).json({ error: "You can only delete your own posts" });
         }
 
         await Post.findByIdAndDelete(req.params.postId);
@@ -140,19 +166,18 @@ const deletePostById = async (req: Request, res: Response) => {
 
 const toggleLike = async (req: Request, res: Response) => {
     try {
+        const { user } = req as RequestWithUser;
         const post = await Post.findById(req.params.postId);
         if (!post) return res.status(404).send("Post not found");
 
-        const userId = (req as any).user.userId;
-        const alreadyLiked = (post.likes as any[]).some(
-            (id: any) => id.toString() === userId
-        );
+        const likes = post.likes as mongoose.Types.ObjectId[];
+        const alreadyLiked = likes.some((id) => id.toString() === user.userId);
 
         const updatedPost = await Post.findByIdAndUpdate(
             req.params.postId,
             alreadyLiked
-                ? { $pull: { likes: userId } }
-                : { $addToSet: { likes: userId } },
+                ? { $pull: { likes: user.userId } }
+                : { $addToSet: { likes: user.userId } },
             { returnDocument: 'after' }
         ).populate('userId', 'username email avatarUrl');
 

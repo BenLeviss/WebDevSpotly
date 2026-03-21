@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 
 // Get secrets from environment variables
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'your-access-token-secret';
@@ -18,18 +18,16 @@ interface TokenPayload {
  * Generate an access token (short-lived)
  */
 export const generateAccessToken = (payload: TokenPayload): string => {
-    return (jwt.sign as any)(payload, ACCESS_TOKEN_SECRET, {
-        expiresIn: ACCESS_TOKEN_EXPIRY
-    });
+    const options: SignOptions = { expiresIn: ACCESS_TOKEN_EXPIRY as SignOptions['expiresIn'] };
+    return jwt.sign(payload as object, ACCESS_TOKEN_SECRET, options);
 };
 
 /**
  * Generate a refresh token (long-lived)
  */
 export const generateRefreshToken = (payload: TokenPayload): string => {
-    return (jwt.sign as any)(payload, REFRESH_TOKEN_SECRET, {
-        expiresIn: REFRESH_TOKEN_EXPIRY
-    });
+    const options: SignOptions = { expiresIn: REFRESH_TOKEN_EXPIRY as SignOptions['expiresIn'] };
+    return jwt.sign(payload as object, REFRESH_TOKEN_SECRET, options);
 };
 
 /**

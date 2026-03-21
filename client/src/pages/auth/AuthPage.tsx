@@ -2,6 +2,7 @@ import './AuthPage.css';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 type Mode = 'login' | 'register';
 
@@ -34,10 +35,11 @@ export default function AuthPage() {
                 await register(username, email, password);
             }
             navigate('/');
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(
-                err.response?.data?.error ||
-                (mode === 'login' ? 'Login failed. Please try again.' : 'Registration failed. Please try again.')
+                getErrorMessage(err, mode === 'login'
+                    ? 'Login failed. Please try again.'
+                    : 'Registration failed. Please try again.')
             );
         } finally {
             setIsLoading(false);

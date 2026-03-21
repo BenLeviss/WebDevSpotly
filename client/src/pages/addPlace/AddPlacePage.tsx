@@ -2,6 +2,7 @@ import './AddPlacePage.css';
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { postsApi } from '../../api/posts';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // The list of categories the user can pick from
 const CATEGORIES = [
@@ -62,8 +63,8 @@ export default function AddPlacePage() {
             // Send to the server — title, description as content, category, and the photo file
             await postsApi.createPost(name.trim(), description.trim(), category, photo);
             navigate('/', { state: { refresh: Date.now() } });
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to share place.');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'Failed to share place.'));
             setLoading(false);
         }
     };

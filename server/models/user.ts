@@ -1,8 +1,23 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+/** Typed interface for User documents, exposing instance methods. */
+export interface IUser extends Document {
+    username: string;
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+    bio?: string;
+    avatarUrl?: string;
+    refreshTokens: string[];
+    createdAt: Date;
+    updatedAt: Date;
+    comparePassword(candidatePassword: string): Promise<boolean>;
+}
+
 // Define the User schema
-const userSchema: Schema = new Schema(
+const userSchema: Schema<IUser> = new Schema(
     {
         username: {
             type: String,
@@ -58,7 +73,7 @@ userSchema.pre('save', async function () {
         return;
     }
     const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password as string, salt);
+    this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Method to compare passwords for login
@@ -70,4 +85,4 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
     }
 };
 
-export default mongoose.model('User', userSchema);
+export default mongoose.model<IUser>('User', userSchema);

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import User from "../models/user";
+import User, { IUser } from "../models/user";
 import {
     generateAccessToken,
     generateRefreshToken,
@@ -46,10 +46,7 @@ const register = async (req: Request, res: Response) => {
         const accessToken = generateAccessToken(tokenPayload);
         const refreshToken = generateRefreshToken(tokenPayload);
 
-        if (!user.refreshTokens) {
-            user.refreshTokens = [];
-        }
-        (user.refreshTokens as string[]).push(refreshToken);
+        user.refreshTokens.push(refreshToken);
         await user.save();
 
         res.status(201).json({
@@ -89,7 +86,7 @@ const login = async (req: Request, res: Response) => {
             });
         }
 
-        const isPasswordValid = await (user as any).comparePassword(password);
+        const isPasswordValid = await user.comparePassword(password);
 
         if (!isPasswordValid) {
             return res.status(401).json({
@@ -106,10 +103,7 @@ const login = async (req: Request, res: Response) => {
         const accessToken = generateAccessToken(tokenPayload);
         const refreshToken = generateRefreshToken(tokenPayload);
 
-        if (!user.refreshTokens) {
-            user.refreshTokens = [];
-        }
-        (user.refreshTokens as string[]).push(refreshToken);
+        user.refreshTokens.push(refreshToken);
         await user.save();
 
         res.json({
@@ -158,7 +152,7 @@ const logout = async (req: Request, res: Response) => {
             });
         }
 
-        if (!user.refreshTokens || !(user.refreshTokens as string[]).includes(token)) {
+        if (!user.refreshTokens.includes(token)) {
             user.refreshTokens = [];
             await user.save();
             return res.status(403).json({
@@ -166,8 +160,8 @@ const logout = async (req: Request, res: Response) => {
             });
         }
 
-        const tokenIndex = (user.refreshTokens as string[]).indexOf(token);
-        (user.refreshTokens as string[]).splice(tokenIndex, 1);
+        const tokenIndex = user.refreshTokens.indexOf(token);
+        user.refreshTokens.splice(tokenIndex, 1);
         await user.save();
 
         res.json({ message: "Logout successful" });
@@ -207,7 +201,7 @@ const refresh = async (req: Request, res: Response) => {
             });
         }
 
-        if (!user.refreshTokens || !(user.refreshTokens as string[]).includes(token)) {
+        if (!user.refreshTokens.includes(token)) {
             user.refreshTokens = [];
             await user.save();
             return res.status(403).json({
@@ -224,8 +218,8 @@ const refresh = async (req: Request, res: Response) => {
         const newAccessToken = generateAccessToken(tokenPayload);
         const newRefreshToken = generateRefreshToken(tokenPayload);
 
-        const tokenIndex = (user.refreshTokens as string[]).indexOf(token);
-        (user.refreshTokens as string[])[tokenIndex] = newRefreshToken;
+        const tokenIndex = user.refreshTokens.indexOf(token);
+        user.refreshTokens[tokenIndex] = newRefreshToken;
         await user.save();
 
         res.json({

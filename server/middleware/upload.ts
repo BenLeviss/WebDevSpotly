@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 });
 
 // Only accept JPG and PNG images
-const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
     const allowed = ['image/jpeg', 'image/png'];
     if (allowed.includes(file.mimetype)) {
         cb(null, true);

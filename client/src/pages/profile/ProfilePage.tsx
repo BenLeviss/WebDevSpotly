@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { userApi } from '../../api/user';
 import type { UserProfile } from '../../api/user';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 export default function ProfilePage() {
     const { user, logout, updateUser } = useAuth();
@@ -90,9 +91,8 @@ export default function ProfilePage() {
             setProfile(data);
             updateUser({ username: data.username, avatarUrl: data.avatarUrl });
             setEditing(false);
-        } catch (err: any) {
-            const msg = err.response?.data?.error || 'Failed to update profile.';
-            setError(msg);
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'Failed to update profile.'));
         } finally {
             setSaving(false);
         }

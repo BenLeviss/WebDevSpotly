@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { postsApi } from '../../api/posts';
+import { getErrorMessage } from '../../utils/errorUtils';
 import '../addPlace/AddPlacePage.css';   // reuse form styles
 import './EditPlacePage.css';
 
@@ -68,8 +69,8 @@ export default function EditPlacePage() {
         try {
             await postsApi.updatePost(postId, name.trim(), description.trim(), category, photo);
             navigate('/places');
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to update place.');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'Failed to update place.'));
             setSaving(false);
         }
     };

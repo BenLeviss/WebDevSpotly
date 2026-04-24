@@ -7,6 +7,7 @@ const router = Router();
 // Public routes
 router.post("/register", authController.register);
 router.post("/login", authController.login);
+router.post("/google", authController.googleLogin);
 
 // Protected routes (require authentication)
 router.post("/logout", authenticate, authController.logout);

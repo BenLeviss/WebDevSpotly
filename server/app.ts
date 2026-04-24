@@ -5,11 +5,13 @@ import express, { Express } from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import path from "path";
+import swaggerUi from "swagger-ui-express";
 
 import postRouter from "./routes/posts";
 import commentRouter from "./routes/comment";
 import userRouter from "./routes/user";
 import authRouter from "./routes/auth";
+import swaggerSpec from "./swagger";
 
 const promise = new Promise<Express>((resolve, reject) => {
     const db = mongoose.connection;
@@ -35,6 +37,11 @@ const promise = new Promise<Express>((resolve, reject) => {
             // A saved path like "/uploads/photo-123.jpg" becomes accessible
             // at http://localhost:3000/uploads/photo-123.jpg
             app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+            app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+            app.get("/api-docs.json", (_req, res) => {
+                res.json(swaggerSpec);
+            });
 
             app.use("/auth", authRouter);
             app.use("/post", postRouter);

@@ -6,9 +6,9 @@ import { NavLink } from 'react-router-dom';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="app-shell">
-
-            {/* The current page fills this area */}
-            <main className="app-main">{children}</main>
+            <div className="app-brand-strip" aria-label="Spotly logo">
+                <img src="/spotly.png" alt="Spotly" className="app-brand-logo" />
+            </div>
 
             {/* Bottom nav — always visible */}
             <nav className="bottom-nav">
@@ -44,6 +44,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <span>Profile</span>
                 </NavLink>
             </nav>
+
+            {/* The current page fills this area */}
+            <main className="app-main">{children}</main>
 
         </div>
     );

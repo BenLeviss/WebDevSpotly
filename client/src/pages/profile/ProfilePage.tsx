@@ -119,11 +119,6 @@ export default function ProfilePage() {
     return (
         <div className="profile-page">
 
-            {/* Header */}
-            <header className="profile-header">
-                <h1 className="profile-header-title">Profile</h1>
-            </header>
-
             {/* All content constrained to a readable width */}
             <div className="profile-content">
 

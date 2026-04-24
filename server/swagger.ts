@@ -71,6 +71,13 @@ const swaggerSpec = {
                 },
                 required: ["email", "password"],
             },
+            GoogleAuthRequest: {
+                type: "object",
+                properties: {
+                    idToken: { type: "string" },
+                },
+                required: ["idToken"],
+            },
             AuthResponse: {
                 type: "object",
                 properties: {
@@ -240,6 +247,32 @@ const swaggerSpec = {
                         },
                     },
                     "401": { description: "Invalid credentials" },
+                },
+            },
+        },
+        "/auth/google": {
+            post: {
+                tags: ["Auth"],
+                summary: "Authenticate with Google",
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/GoogleAuthRequest" },
+                        },
+                    },
+                },
+                responses: {
+                    "200": {
+                        description: "Google login successful",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/AuthResponse" },
+                            },
+                        },
+                    },
+                    "400": { description: "Google idToken is required" },
+                    "401": { description: "Google authentication failed" },
                 },
             },
         },

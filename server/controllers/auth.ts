@@ -1,10 +1,38 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 import User, { IUser } from "../models/user";
 import {
     generateAccessToken,
     generateRefreshToken,
     verifyRefreshToken
 } from "../utils/jwt";
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+const normalizeUsername = (value: string) =>
+    value
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "")
+        .slice(0, 24);
+
+const generateUniqueUsername = async (baseValue: string): Promise<string> => {
+    const fallback = `user${Date.now()}`;
+    let candidate = normalizeUsername(baseValue) || fallback;
+
+    if (candidate.length < 3) {
+        candidate = `${candidate}001`.slice(0, 3);
+    }
+
+    let exists = await User.findOne({ username: candidate });
+    while (exists) {
+        candidate = `${candidate.slice(0, 20)}${Math.floor(Math.random() * 10000)}`;
+        exists = await User.findOne({ username: candidate });
+    }
+
+    return candidate;
+};
 
 /**
  * Register a new user
@@ -232,9 +260,83 @@ const refresh = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * Google login/register with ID token
+ * POST /auth/google
+ */
+const googleLogin = async (req: Request, res: Response) => {
+    try {
+        const { idToken } = req.body as { idToken?: string };
+
+        if (!idToken) {
+            return res.status(400).json({ error: "Google idToken is required" });
+        }
+
+        if (!GOOGLE_CLIENT_ID) {
+            return res.status(500).json({ error: "GOOGLE_CLIENT_ID is not configured" });
+        }
+
+        const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+
+        if (!payload?.email || !payload.email_verified) {
+            return res.status(401).json({ error: "Invalid Google account payload" });
+        }
+
+        let user = await User.findOne({ email: payload.email });
+
+        if (!user) {
+            const username = await generateUniqueUsername(payload.name || payload.email.split("@")[0] || "user");
+            const generatedPassword = `google_${crypto.randomBytes(12).toString("hex")}`;
+
+            user = await User.create({
+                username,
+                email: payload.email,
+                password: generatedPassword,
+                avatarUrl: payload.picture || undefined,
+                refreshTokens: [],
+            });
+        } else if (payload.picture && !user.avatarUrl) {
+            user.avatarUrl = payload.picture;
+            await user.save();
+        }
+
+        const tokenPayload = {
+            userId: String(user._id),
+            username: user.username as string,
+            email: user.email as string,
+        };
+
+        const accessToken = generateAccessToken(tokenPayload);
+        const refreshToken = generateRefreshToken(tokenPayload);
+
+        user.refreshTokens.push(refreshToken);
+        await user.save();
+
+        return res.status(200).json({
+            message: "Google login successful",
+            accessToken,
+            refreshToken,
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                avatarUrl: user.avatarUrl,
+            },
+        });
+    } catch (error) {
+        return res.status(401).json({ error: "Google authentication failed" });
+    }
+};
+
 export default {
     register,
     login,
+    googleLogin,
     logout,
     refresh
 };

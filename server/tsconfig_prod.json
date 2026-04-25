@@ -3,14 +3,16 @@
     "module": "commonjs",
     "esModuleInterop": true,
     "target": "es6",
-    "moduleResolution": "node16",
+    "moduleResolution": "node",
     "sourceMap": true,
-    "outDir": "dist"
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "types": ["jest", "node"],
+    "skipLibCheck": true,
+    "maxNodeModuleJsDepth": 0
   },
-  "lib": [
-    "es2015"
-  ],
-  "exclude": [
-    "./src/tests"
-  ]
+  "lib": ["es2015"],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"] 
 }

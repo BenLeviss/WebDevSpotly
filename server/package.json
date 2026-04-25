@@ -5,7 +5,7 @@
     "main": "dist/server.js",
     "scripts": {
         "dev": "nodemon src/server.ts",
-        "build": "rimraf dist && tsc",
+        "build": "tsc",
         "start": "node dist/server.js",
         "test": "tsc && jest --detectOpenHandles --forceExit",
         "test:watch": "jest --watch",
@@ -28,6 +28,7 @@
         "openai": "^6.34.0",
         "react-router-dom": "^7.13.1",
         "swagger-ui-express": "^5.0.1",
+        "typescript": "^6.0.3",
         "zod": "^4.3.6"
     },
     "devDependencies": {

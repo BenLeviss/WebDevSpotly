@@ -12,6 +12,7 @@ import commentRouter from "./routes/comment";
 import userRouter from "./routes/user";
 import authRouter from "./routes/auth";
 import swaggerSpec from "./swagger";
+import aiSearchRouter from "./routes/aiSearch";
 
 const promise = new Promise<Express>((resolve, reject) => {
     const db = mongoose.connection;
@@ -47,6 +48,7 @@ const promise = new Promise<Express>((resolve, reject) => {
             app.use("/post", postRouter);
             app.use("/comment", commentRouter);
             app.use("/user", userRouter);
+            app.use("/ai", aiSearchRouter);
 
             resolve(app);
         })

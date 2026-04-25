@@ -3,7 +3,10 @@ import { triggerAuthExpired } from '../context/AuthContext';
 
 const envApiUrl = import.meta.env.VITE_API_URL?.trim();
 const isLocalHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const apiBaseURL = envApiUrl || (isLocalHost ? 'http://localhost:3000' : window.location.origin);
+const isEnvLocalhost = !!envApiUrl && /localhost|127\.0\.0\.1/.test(envApiUrl);
+const apiBaseURL = (!isLocalHost && isEnvLocalhost)
+    ? window.location.origin
+    : (envApiUrl || (isLocalHost ? 'http://localhost:3000' : window.location.origin));
 
 const api = axios.create({
     baseURL: `${apiBaseURL.replace(/\/$/, '')}/api`,

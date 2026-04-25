@@ -61,7 +61,7 @@ const register = async (req: Request, res: Response) => {
             username,
             email,
             password,
-            avatarUrl,
+            avatarUrl: avatarUrl || '/uploads/default-user.png',
             refreshTokens: []
         });
 
@@ -117,6 +117,12 @@ const login = async (req: Request, res: Response) => {
 
         if (!isPasswordValid) {
             return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        // Backfill default avatar for old accounts that were registered without one
+        if (!user.avatarUrl || user.avatarUrl === '/default-user.png') {
+            user.avatarUrl = '/uploads/default-user.png';
+            await user.save();
         }
 
         const tokenPayload = {

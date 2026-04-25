@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/auth/AuthPage';
 import AppLayout from './components/layout/AppLayout';
@@ -26,9 +26,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
+
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <Router>
         <Routes>
           {/* Public routes — guests only */}
           <Route path="/login" element={
@@ -85,7 +87,7 @@ export default function App() {
           {/* Catch-all: unknown URL → login (works for both guests and logged-in users) */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
-      </BrowserRouter>
+      </Router>
     </AuthProvider>
   );
 }

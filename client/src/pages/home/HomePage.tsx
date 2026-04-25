@@ -219,16 +219,6 @@ export default function HomePage() {
 
     return (
         <div className="home-page">
-            <header className="home-header">
-                <div className="home-header-brand">
-                    <img src="/spotly-logo.png" alt="Spotly" className="home-header-logo" />
-                    <h1 className="home-title">
-                        <span className="home-title-spot">SP</span>O<span className="home-title-spot">TLY</span>
-                    </h1>
-                </div>
-                <div className="home-header-divider" />
-            </header>
-
             {loading && (
                 <div className="home-loading">
                     <div className="home-spinner" />

@@ -13,6 +13,7 @@ interface AuthContextType {
     accessToken: string | null;
     refreshToken: string | null;
     login: (email: string, password: string) => Promise<void>;
+    loginWithGoogle: (idToken: string) => Promise<void>;
     register: (username: string, email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     updateUser: (updates: Partial<User>) => void;
@@ -75,6 +76,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         saveAuth(data.user, data.accessToken, data.refreshToken);
     };
 
+    const loginWithGoogle = async (idToken: string) => {
+        const { data } = await authApi.googleLogin(idToken);
+        saveAuth(data.user, data.accessToken, data.refreshToken);
+    };
+
     const register = async (username: string, email: string, password: string) => {
         const { data } = await authApi.register(username, email, password);
         saveAuth(data.user, data.accessToken, data.refreshToken);
@@ -102,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, accessToken, refreshToken, login, register, logout, updateUser }}>
+        <AuthContext.Provider value={{ user, accessToken, refreshToken, login, loginWithGoogle, register, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

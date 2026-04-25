@@ -1,14 +1,16 @@
 import './AuthPage.css';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 type Mode = 'login' | 'register';
 
 export default function AuthPage() {
-    const { login, register } = useAuth();
+    const { login, loginWithGoogle, register } = useAuth();
     const navigate = useNavigate();
+    const hasGoogleAuth = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
     const [mode, setMode] = useState<Mode>('login');
     const [username, setUsername] = useState('');
@@ -46,14 +48,31 @@ export default function AuthPage() {
         }
     };
 
+    const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+        if (!credentialResponse.credential) {
+            setError('Google sign-in failed. Please try again.');
+            return;
+        }
+
+        setIsLoading(true);
+        setError('');
+        try {
+            await loginWithGoogle(credentialResponse.credential);
+            navigate('/');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'Google login failed. Please try again.'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="auth-page">
 
             <div className="auth-card">
                 {/* Logo & Brand */}
                 <div className="auth-logo-row">
-                    <img src="/spotly-logo.png" alt="Spotly" className="auth-logo-icon" />
-                    <span className="auth-brand-name">SP<span>O</span>TLY</span>
+                    <img src="/spotly.png" alt="Spotly" className="auth-logo-icon" />
                 </div>
 
                 <div className="auth-divider" />
@@ -111,6 +130,43 @@ export default function AuthPage() {
                             ? mode === 'login' ? 'Logging in…' : 'Creating account…'
                             : mode === 'login' ? 'Log In' : 'Sign Up'}
                     </button>
+
+                    {hasGoogleAuth && (
+                        <>
+                            <div className="auth-social-divider">
+                                <span>or</span>
+                            </div>
+
+                            <div className="auth-google-wrap">
+                                <GoogleLogin
+                                    onSuccess={handleGoogleSuccess}
+                                    onError={() => setError('Google sign-in failed. Please try again.')}
+                                    text={mode === 'login' ? 'signin_with' : 'continue_with'}
+                                    shape="pill"
+                                    width="320"
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {!hasGoogleAuth && (
+                        <>
+                            <div className="auth-social-divider">
+                                <span>or</span>
+                            </div>
+
+                            <div className="auth-google-wrap">
+                                <button
+                                    type="button"
+                                    className="auth-google-fallback"
+                                    title="Set VITE_GOOGLE_CLIENT_ID to enable Google sign-in"
+                                    disabled
+                                >
+                                    Continue with Google (setup required)
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <div className="auth-link-row">

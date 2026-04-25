@@ -29,6 +29,10 @@
     box-shadow: 0 -2px 12px rgba(0, 150, 136, 0.06);
 }
 
+.app-brand-strip {
+    display: none;
+}
+
 .nav-item {
     display: flex;
     flex-direction: column;
@@ -49,6 +53,61 @@
 .nav-icon {
     width: 22px;
     height: 22px;
+}
+
+@media (min-width: 992px) {
+    .app-main {
+        padding-bottom: 24px;
+        max-width: 1200px;
+        width: 100%;
+        margin: 0 auto;
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+
+    .bottom-nav {
+        position: sticky;
+        top: 0;
+        bottom: auto;
+        height: 64px;
+        justify-content: center;
+        gap: 10px;
+        border-top: none;
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .app-brand-strip {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 8px 0 10px;
+        border-bottom: 1px solid #c8e6e3;
+        background: rgba(255, 255, 255, 0.98);
+    }
+
+    .app-brand-logo {
+        width: 180px;
+        height: 52px;
+        object-fit: contain;
+    }
+
+    .nav-item {
+        flex-direction: row;
+        gap: 8px;
+        font-size: 13px;
+        padding: 9px 14px;
+        border-radius: 999px;
+    }
+
+    .nav-item:hover {
+        background: rgba(0, 150, 136, 0.08);
+    }
+
+    .nav-icon {
+        width: 18px;
+        height: 18px;
+    }
 }
 
 /* Green circle for the Add button */

@@ -1,11 +1,15 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 
-// Get secrets from environment variables
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'your-access-token-secret';
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'your-refresh-token-secret';
+// Secrets — crash loudly at startup if missing so we never sign tokens with a weak fallback
+if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
+    throw new Error('ACCESS_TOKEN_SECRET and REFRESH_TOKEN_SECRET must be set in environment variables');
+}
+
+const ACCESS_TOKEN_SECRET  = process.env.ACCESS_TOKEN_SECRET;
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
 // Token expiration times from environment variables
-const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY || '15m';
+const ACCESS_TOKEN_EXPIRY  = process.env.ACCESS_TOKEN_EXPIRY  || '15m';
 const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d';
 
 interface TokenPayload {

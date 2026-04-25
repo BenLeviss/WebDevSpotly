@@ -10,7 +10,7 @@
         "test": "tsc && jest --detectOpenHandles --forceExit",
         "test:watch": "jest --watch",
         "prod1": "tsc -p tsconfig_prod.json && node --env-file=.envprod ./dist/server.js",
-        "prod": "tsc -p tsconfig_prod.json && pm2 startOrRestart ecosystem.config.js --env production"
+        "prod": "tsc -p tsconfig_prod.json && pm2 startOrRestart ecosystem.config.js --env-file=.envprod --name spotly-server"
     },
     "dependencies": {
         "@types/bcryptjs": "^2.4.6",

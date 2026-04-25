@@ -25,6 +25,8 @@ const isHttpsConfigValid = (): boolean => {
 };
 
 appPromise.then((app) => {
+    console.log(`NODE_ENV: ${process.env.NODE_ENV ?? "development"}`);
+
     if (isHttpsConfigValid() && keyPath && certPath) {
         // HTTPS server on HTTPS_PORT
         const httpsServer = https.createServer(

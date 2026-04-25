@@ -10,6 +10,10 @@ const swaggerSpec = {
             url: "http://localhost:3000",
             description: "Local development server",
         },
+        {
+            url: "https://node19.cs.colman.ac.il:4000",
+            description: "Production backend server",
+        },
     ],
     tags: [
         { name: "Auth", description: "Authentication endpoints" },

@@ -8,6 +8,20 @@ import { aiSearchApi } from '../../api/aiSearch';
 import type { ParsedSearchQuery } from '../../api/aiSearch';
 import { getErrorMessage } from '../../utils/errorUtils';
 
+const envApiUrl = import.meta.env.VITE_API_URL?.trim();
+const isLocalHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const isEnvLocalhost = !!envApiUrl && /localhost|127\.0\.0\.1/.test(envApiUrl);
+const backendBaseUrl = ((!isLocalHost && isEnvLocalhost) ? window.location.origin : (envApiUrl || (isLocalHost ? 'http://localhost:3000' : window.location.origin)))
+    .replace(/\/$/, '')
+    .replace(/\/api$/, '');
+
+const resolveMediaUrl = (value?: string | null) => {
+    if (!value) return null;
+    const normalized = value === '/default-user.png' ? '/uploads/default-user.png' : value;
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) return normalized;
+    return `${backendBaseUrl}${normalized}`;
+};
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function timeAgo(dateStr: string): string {
@@ -112,7 +126,8 @@ function PlaceCard({ post, currentUserId, onLikeToggle }: PlaceCardProps) {
     const liked = Array.isArray(post.likes) && post.likes.includes(currentUserId);
     const likeCount = (post.likes ?? []).length;
 
-    const avatarUrl = userObj.avatarUrl ?? null;
+    const avatarUrl = resolveMediaUrl(userObj.avatarUrl);
+    const imageUrl = resolveMediaUrl(post.imageUrl);
     const initial = userObj.username?.charAt(0).toUpperCase() || '?';
 
     return (
@@ -132,10 +147,10 @@ function PlaceCard({ post, currentUserId, onLikeToggle }: PlaceCardProps) {
             </div>
 
             {/* Place image */}
-            {post.imageUrl && (
+            {imageUrl && (
                 <div className="card-image-wrap">
                     <img
-                        src={post.imageUrl}
+                        src={imageUrl}
                         alt={post.title}
                         className="card-image"
                     />

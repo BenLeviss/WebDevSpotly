@@ -3,10 +3,15 @@ import path from 'path';
 import fs from 'fs';
 
 // Make sure the uploads folder exists when the server starts
-const uploadDirCandidates = [
-    path.join(__dirname, 'uploads'),      // prod build: server/dist/uploads
-    path.join(__dirname, '..', 'uploads') // dev ts-node: server/uploads
-];
+const uploadDirCandidates = process.env.NODE_ENV === 'production'
+    ? [
+        path.join(__dirname, '..', 'uploads'),      // prod build: server/dist/uploads
+        path.join(__dirname, '..', '..', 'uploads') // fallback: server/uploads
+    ]
+    : [
+        path.join(__dirname, '..', '..', 'uploads'), // dev ts-node: server/uploads
+        path.join(__dirname, '..', 'uploads')        // fallback: server/src/uploads
+    ];
 const uploadDir = uploadDirCandidates.find((dir) => fs.existsSync(dir)) || uploadDirCandidates[0];
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });

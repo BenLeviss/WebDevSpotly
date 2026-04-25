@@ -1,17 +1,17 @@
 import request from "supertest";
 import { Request, Response } from "express";
-import postRouter from "../routes/posts";
-import postsController from "../controllers/posts";
-import commentController from "../controllers/comment";
-import { authenticate } from "../middleware/auth";
-import { uploadImage } from "../middleware/upload";
+import postRouter from "../src/routes/posts";
+import postsController from "../src/controllers/posts";
+import commentController from "../src/controllers/comment";
+import { authenticate } from "../src/middleware/auth";
+import { uploadImage } from "../src/middleware/upload";
 import {
     attachDefaultGuardBehavior,
     attachDefaultUploadBehavior,
     createTestApp,
 } from "./helpers/testApp";
 
-jest.mock("../controllers/posts", () => ({
+jest.mock("../src/controllers/posts", () => ({
     __esModule: true,
     default: {
         createPost: jest.fn(),
@@ -23,7 +23,7 @@ jest.mock("../controllers/posts", () => ({
     },
 }));
 
-jest.mock("../controllers/comment", () => ({
+jest.mock("../src/controllers/comment", () => ({
     __esModule: true,
     default: {
         createComment: jest.fn(),
@@ -35,11 +35,11 @@ jest.mock("../controllers/comment", () => ({
     },
 }));
 
-jest.mock("../middleware/auth", () => ({
+jest.mock("../src/middleware/auth", () => ({
     authenticate: jest.fn(),
 }));
 
-jest.mock("../middleware/upload", () => ({
+jest.mock("../src/middleware/upload", () => ({
     uploadImage: jest.fn(),
 }));
 

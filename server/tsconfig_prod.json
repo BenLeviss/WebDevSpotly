@@ -8,7 +8,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
-    "types": [ "node"],
+    "types": [ "node", "swagger-ui-express"],
     "skipLibCheck": true,
     "maxNodeModuleJsDepth": 0
   },

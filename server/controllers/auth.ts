@@ -1,15 +1,16 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
-import User, { IUser } from "../models/user";
+import User from "../models/user";
 import {
     generateAccessToken,
     generateRefreshToken,
     verifyRefreshToken
 } from "../utils/jwt";
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 const normalizeUsername = (value: string) =>
     value
@@ -18,21 +19,18 @@ const normalizeUsername = (value: string) =>
         .slice(0, 24);
 
 const generateUniqueUsername = async (baseValue: string): Promise<string> => {
-    const fallback = `user${Date.now()}`;
-    let candidate = normalizeUsername(baseValue) || fallback;
-
-    if (candidate.length < 3) {
-        candidate = `${candidate}001`.slice(0, 3);
-    }
+    let candidate = normalizeUsername(baseValue) || `user${Date.now()}`;
+    if (candidate.length < 3) candidate = `${candidate}001`.slice(0, 3);
 
     let exists = await User.findOne({ username: candidate });
     while (exists) {
         candidate = `${candidate.slice(0, 20)}${Math.floor(Math.random() * 10000)}`;
         exists = await User.findOne({ username: candidate });
     }
-
     return candidate;
 };
+
+// ── Controllers ───────────────────────────────────────────────────────────────
 
 /**
  * Register a new user
@@ -41,6 +39,7 @@ const generateUniqueUsername = async (baseValue: string): Promise<string> => {
 const register = async (req: Request, res: Response) => {
     try {
         const { username, email, password } = req.body;
+        const avatarUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
 
         if (!username || !email || !password) {
             return res.status(400).json({
@@ -62,6 +61,7 @@ const register = async (req: Request, res: Response) => {
             username,
             email,
             password,
+            avatarUrl,
             refreshTokens: []
         });
 
@@ -84,7 +84,8 @@ const register = async (req: Request, res: Response) => {
             user: {
                 _id: user._id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                avatarUrl: user.avatarUrl
             }
         });
     } catch (error) {
@@ -109,17 +110,13 @@ const login = async (req: Request, res: Response) => {
         const user = await User.findOne({ email });
 
         if (!user) {
-            return res.status(401).json({
-                error: "Invalid email or password"
-            });
+            return res.status(401).json({ error: "Invalid email or password" });
         }
 
         const isPasswordValid = await user.comparePassword(password);
 
         if (!isPasswordValid) {
-            return res.status(401).json({
-                error: "Invalid email or password"
-            });
+            return res.status(401).json({ error: "Invalid email or password" });
         }
 
         const tokenPayload = {
@@ -141,7 +138,8 @@ const login = async (req: Request, res: Response) => {
             user: {
                 _id: user._id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                avatarUrl: user.avatarUrl
             }
         });
     } catch (error) {
@@ -155,8 +153,8 @@ const login = async (req: Request, res: Response) => {
  */
 const logout = async (req: Request, res: Response) => {
     try {
-        const authHeaders = req.headers['authorization'];
-        const token = authHeaders && authHeaders.split(' ')[1];
+        const authHeaders = req.headers["authorization"];
+        const token = authHeaders && authHeaders.split(" ")[1];
 
         if (!token) {
             return res.status(401).json({
@@ -167,17 +165,13 @@ const logout = async (req: Request, res: Response) => {
         const decoded = verifyRefreshToken(token);
 
         if (!decoded) {
-            return res.status(403).json({
-                error: "Invalid refresh token"
-            });
+            return res.status(403).json({ error: "Invalid refresh token" });
         }
 
         const user = await User.findById(decoded.userId);
 
         if (!user) {
-            return res.status(403).json({
-                error: "User not found"
-            });
+            return res.status(403).json({ error: "User not found" });
         }
 
         if (!user.refreshTokens.includes(token)) {
@@ -204,8 +198,8 @@ const logout = async (req: Request, res: Response) => {
  */
 const refresh = async (req: Request, res: Response) => {
     try {
-        const authHeaders = req.headers['authorization'];
-        const token = authHeaders && authHeaders.split(' ')[1];
+        const authHeaders = req.headers["authorization"];
+        const token = authHeaders && authHeaders.split(" ")[1];
 
         if (!token) {
             return res.status(401).json({
@@ -224,9 +218,7 @@ const refresh = async (req: Request, res: Response) => {
         const user = await User.findById(decoded.userId);
 
         if (!user) {
-            return res.status(403).json({
-                error: "User not found"
-            });
+            return res.status(403).json({ error: "User not found" });
         }
 
         if (!user.refreshTokens.includes(token)) {
@@ -261,7 +253,7 @@ const refresh = async (req: Request, res: Response) => {
 };
 
 /**
- * Google login/register with ID token
+ * Google OAuth login / register
  * POST /auth/google
  */
 const googleLogin = async (req: Request, res: Response) => {
@@ -272,33 +264,35 @@ const googleLogin = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Google idToken is required" });
         }
 
-        if (!GOOGLE_CLIENT_ID) {
-            return res.status(500).json({ error: "GOOGLE_CLIENT_ID is not configured" });
+        if (!process.env.GOOGLE_CLIENT_ID) {
+            return res.status(500).json({ error: "GOOGLE_CLIENT_ID is not configured on the server" });
         }
 
         const ticket = await googleClient.verifyIdToken({
             idToken,
-            audience: GOOGLE_CLIENT_ID,
+            audience: process.env.GOOGLE_CLIENT_ID
         });
 
         const payload = ticket.getPayload();
 
         if (!payload?.email || !payload.email_verified) {
-            return res.status(401).json({ error: "Invalid Google account payload" });
+            return res.status(401).json({ error: "Invalid or unverified Google account" });
         }
 
         let user = await User.findOne({ email: payload.email });
 
         if (!user) {
-            const username = await generateUniqueUsername(payload.name || payload.email.split("@")[0] || "user");
+            const username = await generateUniqueUsername(
+                payload.name || payload.email.split("@")[0]
+            );
             const generatedPassword = `google_${crypto.randomBytes(12).toString("hex")}`;
 
             user = await User.create({
                 username,
                 email: payload.email,
                 password: generatedPassword,
-                avatarUrl: payload.picture || undefined,
-                refreshTokens: [],
+                avatarUrl: payload.picture ?? undefined,
+                refreshTokens: []
             });
         } else if (payload.picture && !user.avatarUrl) {
             user.avatarUrl = payload.picture;
@@ -308,7 +302,7 @@ const googleLogin = async (req: Request, res: Response) => {
         const tokenPayload = {
             userId: String(user._id),
             username: user.username as string,
-            email: user.email as string,
+            email: user.email as string
         };
 
         const accessToken = generateAccessToken(tokenPayload);
@@ -325,18 +319,18 @@ const googleLogin = async (req: Request, res: Response) => {
                 _id: user._id,
                 username: user.username,
                 email: user.email,
-                avatarUrl: user.avatarUrl,
-            },
+                avatarUrl: user.avatarUrl
+            }
         });
     } catch (error) {
-        return res.status(401).json({ error: "Google authentication failed" });
+        return res.status(401).json({ error: "Google authentication failed: " + (error as Error).message });
     }
 };
 
 export default {
     register,
     login,
-    googleLogin,
     logout,
-    refresh
+    refresh,
+    googleLogin
 };

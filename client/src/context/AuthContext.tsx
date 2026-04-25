@@ -14,7 +14,7 @@ interface AuthContextType {
     refreshToken: string | null;
     login: (email: string, password: string) => Promise<void>;
     loginWithGoogle: (idToken: string) => Promise<void>;
-    register: (username: string, email: string, password: string) => Promise<void>;
+    register: (username: string, email: string, password: string, avatarFile?: File | null) => Promise<void>;
     logout: () => Promise<void>;
     updateUser: (updates: Partial<User>) => void;
 }
@@ -81,8 +81,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         saveAuth(data.user, data.accessToken, data.refreshToken);
     };
 
-    const register = async (username: string, email: string, password: string) => {
-        const { data } = await authApi.register(username, email, password);
+    const register = async (username: string, email: string, password: string, avatarFile?: File | null) => {
+        const { data } = await authApi.register(username, email, password, avatarFile);
         saveAuth(data.user, data.accessToken, data.refreshToken);
     };
 

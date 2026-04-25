@@ -1,5 +1,6 @@
 import './AuthPage.css';
-import { useState } from 'react';
+import type { ChangeEvent } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
@@ -10,14 +11,17 @@ type Mode = 'login' | 'register';
 export default function AuthPage() {
     const { login, loginWithGoogle, register } = useAuth();
     const navigate = useNavigate();
-    const hasGoogleAuth = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+    const hasGoogleClientId = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
     const [mode, setMode] = useState<Mode>('login');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const switchMode = (next: Mode) => {
         setMode(next);
@@ -25,6 +29,20 @@ export default function AuthPage() {
         setUsername('');
         setEmail('');
         setPassword('');
+        setAvatarFile(null);
+        setAvatarPreview(null);
+    };
+
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
     };
 
     const handleSubmit = async () => {
@@ -34,7 +52,7 @@ export default function AuthPage() {
             if (mode === 'login') {
                 await login(email, password);
             } else {
-                await register(username, email, password);
+                await register(username, email, password, avatarFile);
             }
             navigate('/');
         } catch (err: unknown) {
@@ -85,17 +103,41 @@ export default function AuthPage() {
                     {error && <div className="auth-error">{error}</div>}
 
                     {mode === 'register' && (
-                        <input
-                            id="register-username"
-                            className="auth-input"
-                            type="text"
-                            placeholder="Username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            minLength={3}
-                            maxLength={30}
-                            autoComplete="username"
-                        />
+                        <>
+                            <div className="auth-avatar-upload">
+                                <button
+                                    type="button"
+                                    className="auth-avatar-trigger"
+                                    onClick={handleAvatarClick}
+                                >
+                                    {avatarPreview ? (
+                                        <img src={avatarPreview} alt="Profile preview" className="auth-avatar-preview-img" />
+                                    ) : (
+                                        <span className="auth-avatar-placeholder">+</span>
+                                    )}
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    className="auth-avatar-input"
+                                    type="file"
+                                    accept="image/jpeg,image/png"
+                                    onChange={handleAvatarChange}
+                                />
+                                <p className="auth-avatar-hint">Add profile photo (optional)</p>
+                            </div>
+
+                            <input
+                                id="register-username"
+                                className="auth-input"
+                                type="text"
+                                placeholder="Username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                minLength={3}
+                                maxLength={30}
+                                autoComplete="username"
+                            />
+                        </>
                     )}
 
                     <input
@@ -131,7 +173,7 @@ export default function AuthPage() {
                             : mode === 'login' ? 'Log In' : 'Sign Up'}
                     </button>
 
-                    {hasGoogleAuth && (
+                    {hasGoogleClientId && (
                         <>
                             <div className="auth-social-divider">
                                 <span>or</span>
@@ -145,25 +187,6 @@ export default function AuthPage() {
                                     shape="pill"
                                     width="320"
                                 />
-                            </div>
-                        </>
-                    )}
-
-                    {!hasGoogleAuth && (
-                        <>
-                            <div className="auth-social-divider">
-                                <span>or</span>
-                            </div>
-
-                            <div className="auth-google-wrap">
-                                <button
-                                    type="button"
-                                    className="auth-google-fallback"
-                                    title="Set VITE_GOOGLE_CLIENT_ID to enable Google sign-in"
-                                    disabled
-                                >
-                                    Continue with Google (setup required)
-                                </button>
                             </div>
                         </>
                     )}

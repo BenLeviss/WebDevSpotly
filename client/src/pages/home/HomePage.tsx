@@ -4,6 +4,9 @@ import './HomePage.css';
 import { postsApi } from '../../api/posts';
 import type { Post } from '../../api/posts';
 import { useAuth } from '../../context/AuthContext';
+import { aiSearchApi } from '../../api/aiSearch';
+import type { ParsedSearchQuery } from '../../api/aiSearch';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -17,6 +20,74 @@ function timeAgo(dateStr: string): string {
     const days = Math.floor(hours / 24);
     if (days === 1) return 'Yesterday';
     return `${days}d ago`;
+}
+
+function buildSearchText(post: Post): string {
+    const userObj = typeof post.userId === 'object' && post.userId !== null
+        ? post.userId
+        : { username: '' };
+
+    return [
+        post.title,
+        post.content,
+        post.category,
+        userObj.username,
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+}
+
+function applyAiFilters(posts: Post[], parsed: ParsedSearchQuery): Post[] {
+    const { filters } = parsed;
+    const include = (filters.keywordsInclude ?? []).map(k => k.toLowerCase()).filter(Boolean);
+    const exclude = (filters.keywordsExclude ?? []).map(k => k.toLowerCase()).filter(Boolean);
+    const tags = (filters.tags ?? []).map(t => t.toLowerCase()).filter(Boolean);
+    const category = filters.category?.toLowerCase() || null;
+
+    const filtered = posts.filter((post) => {
+        const text = buildSearchText(post);
+        const postCategory = (post.category || '').toLowerCase();
+
+        if (category && postCategory !== category) return false;
+
+        if (include.length > 0 && !include.every((kw) => text.includes(kw))) return false;
+
+        if (exclude.some((kw) => text.includes(kw))) return false;
+
+        if (tags.length > 0 && !tags.every((tag) => text.includes(tag))) return false;
+
+        return true;
+    });
+
+    const sorted = [...filtered];
+    switch (filters.sort) {
+        case 'newest':
+            sorted.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+            break;
+        case 'oldest':
+            sorted.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+            break;
+        case 'mostLiked':
+            sorted.sort((a, b) => (b.likes?.length ?? 0) - (a.likes?.length ?? 0));
+            break;
+        case 'relevance': {
+            const relevanceTerms = [...include, ...tags];
+            sorted.sort((a, b) => {
+                const aText = buildSearchText(a);
+                const bText = buildSearchText(b);
+                const aScore = relevanceTerms.reduce((sum, term) => sum + (aText.includes(term) ? 1 : 0), 0);
+                const bScore = relevanceTerms.reduce((sum, term) => sum + (bText.includes(term) ? 1 : 0), 0);
+                if (bScore !== aScore) return bScore - aScore;
+                return +new Date(b.createdAt) - +new Date(a.createdAt);
+            });
+            break;
+        }
+        default:
+            break;
+    }
+
+    return sorted;
 }
 
 
@@ -132,30 +203,45 @@ export default function HomePage() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(true);
+    const [aiQuery, setAiQuery] = useState('');
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiApplied, setAiApplied] = useState(false);
+    const [aiResult, setAiResult] = useState<ParsedSearchQuery | null>(null);
+    const [aiError, setAiError] = useState<string | null>(null);
 
     const PAGE_SIZE = 5;
 
     // Sentinel ref for infinite scroll
     const sentinelRef = useRef<HTMLDivElement>(null);
 
-    // Reset & fetch first page whenever we land on this page
-    useEffect(() => {
+    const fetchFirstPage = useCallback(async () => {
         setLoading(true);
         setError(null);
+        setAiError(null);
+        try {
+            const { data } = await postsApi.getPosts(0, PAGE_SIZE);
+            setPosts(data);
+            setHasMore(data.length >= PAGE_SIZE);
+        } catch {
+            setError('Could not load posts.');
+        } finally {
+            setLoading(false);
+        }
+    }, [PAGE_SIZE]);
+
+    // Reset & fetch first page whenever we land on this page
+    useEffect(() => {
         setPosts([]);
         setHasMore(true);
-        postsApi.getPosts(0, PAGE_SIZE)
-            .then(({ data }) => {
-                setPosts(data);
-                if (data.length < PAGE_SIZE) setHasMore(false);
-            })
-            .catch(() => setError('Could not load posts.'))
-            .finally(() => setLoading(false));
-    }, [location.key]);
+        setAiApplied(false);
+        setAiResult(null);
+        setAiError(null);
+        fetchFirstPage();
+    }, [location.key, fetchFirstPage]);
 
     // Load more posts (appends to existing list)
     const loadMore = useCallback(async () => {
-        if (loadingMore || !hasMore) return;
+        if (loadingMore || !hasMore || aiApplied) return;
         setLoadingMore(true);
         try {
             const { data } = await postsApi.getPosts(posts.length, PAGE_SIZE);
@@ -166,11 +252,11 @@ export default function HomePage() {
         } finally {
             setLoadingMore(false);
         }
-    }, [posts.length, loadingMore, hasMore]);
+    }, [posts.length, loadingMore, hasMore, aiApplied]);
 
     // IntersectionObserver — triggers loadMore when sentinel becomes visible
     useEffect(() => {
-        if (loading || !hasMore) return;
+        if (loading || !hasMore || aiApplied) return;
         const sentinel = sentinelRef.current;
         if (!sentinel) return;
 
@@ -180,7 +266,44 @@ export default function HomePage() {
         );
         observer.observe(sentinel);
         return () => observer.disconnect();
-    }, [loading, hasMore, loadMore]);
+    }, [loading, hasMore, aiApplied, loadMore]);
+
+    const runAiSearch = useCallback(async () => {
+        const query = aiQuery.trim();
+        if (!query) {
+            setAiError('Please enter a search query.');
+            return;
+        }
+
+        setAiLoading(true);
+        setAiError(null);
+        setError(null);
+
+        try {
+            const [{ data: parsed }, { data: allPosts }] = await Promise.all([
+                aiSearchApi.parseQuery(query),
+                postsApi.getPosts(0, 100),
+            ]);
+
+            const filtered = applyAiFilters(allPosts, parsed);
+            setAiResult(parsed);
+            setPosts(filtered);
+            setAiApplied(true);
+            setHasMore(false);
+        } catch (err: unknown) {
+            setAiError(getErrorMessage(err, 'AI search failed. Please try again.'));
+        } finally {
+            setAiLoading(false);
+        }
+    }, [aiQuery]);
+
+    const clearAiSearch = useCallback(async () => {
+        setAiQuery('');
+        setAiApplied(false);
+        setAiResult(null);
+        setAiError(null);
+        await fetchFirstPage();
+    }, [fetchFirstPage]);
 
     // Optimistic like toggle
     const handleLikeToggle = useCallback(async (postId: string) => {
@@ -219,6 +342,50 @@ export default function HomePage() {
 
     return (
         <div className="home-page">
+            <div className="home-ai-search-wrap">
+                <div className="home-ai-search-row">
+                    <input
+                        type="text"
+                        className="home-ai-input"
+                        placeholder="Try: quiet cafe with wifi, no loud music"
+                        value={aiQuery}
+                        onChange={(e) => setAiQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !aiLoading) {
+                                e.preventDefault();
+                                runAiSearch();
+                            }
+                        }}
+                    />
+                    <button
+                        type="button"
+                        className="home-ai-btn"
+                        onClick={runAiSearch}
+                        disabled={aiLoading}
+                    >
+                        {aiLoading ? 'Searching…' : 'AI Search'}
+                    </button>
+                    {aiApplied && (
+                        <button
+                            type="button"
+                            className="home-ai-clear-btn"
+                            onClick={clearAiSearch}
+                            disabled={aiLoading}
+                        >
+                            Clear
+                        </button>
+                    )}
+                </div>
+
+                {aiResult && (
+                    <p className="home-ai-meta">
+                        <strong>AI:</strong> {aiResult.normalizedQuery} · confidence {Math.round(aiResult.confidence * 100)}%
+                    </p>
+                )}
+
+                {aiError && <div className="home-error">{aiError}</div>}
+            </div>
+
             {loading && (
                 <div className="home-loading">
                     <div className="home-spinner" />
@@ -252,7 +419,7 @@ export default function HomePage() {
             </div>
 
             {/* Sentinel for infinite scroll — triggers next page load */}
-            {!loading && hasMore && (
+            {!loading && hasMore && !aiApplied && (
                 <div ref={sentinelRef} className="home-loading" style={{ padding: '20px 0' }}>
                     {loadingMore && <div className="home-spinner" />}
                 </div>

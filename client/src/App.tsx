@@ -21,8 +21,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 //    If already logged in → sends them to / (home).
 //    This prevents a logged-in user from seeing the login/register page.
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  return user ? <Navigate to="/" replace /> : <>{children}</>;
+  const { user, accessToken } = useAuth();
+  return user && accessToken ? <Navigate to="/" replace /> : <>{children}</>;
 }
 
 export default function App() {

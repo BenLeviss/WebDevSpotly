@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { triggerAuthExpired } from '../context/AuthContext';
 
+const apiBaseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 const api = axios.create({
-    baseURL: '/api',
+    baseURL: `${apiBaseURL}/api`,
     headers: {
         'Content-Type': 'application/json',
     },

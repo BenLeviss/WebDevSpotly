@@ -6,6 +6,26 @@ import { userApi } from '../../api/user';
 import type { UserProfile } from '../../api/user';
 import { getErrorMessage } from '../../utils/errorUtils';
 
+// ── Media URL helpers (module-level, same pattern as HomePage) ────────────────
+const envApiUrl = import.meta.env.VITE_API_URL?.trim();
+const isDevelopment = import.meta.env.MODE === 'development';
+const backendBaseUrl = (isDevelopment
+    ? 'http://localhost:3000'
+    : (envApiUrl || window.location.origin))
+    .replace(/\/$/, '')
+    .replace(/\/api$/, '');
+
+const resolveMediaUrl = (value?: string | null): string | null => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    const normalized = (trimmed === '/default-user.png' || trimmed === 'default-user.png')
+        ? '/uploads/default-user.png'
+        : trimmed;
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) return normalized;
+    const relativePath = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    return `${backendBaseUrl}${relativePath}`;
+};
+
 export default function ProfilePage() {
     const { user, logout, updateUser } = useAuth();
     const navigate = useNavigate();
@@ -100,13 +120,12 @@ export default function ProfilePage() {
 
     // ── Derived values ──
 
+    const avatarUrlRaw = profile?.avatarUrl ?? user?.avatarUrl ?? '/uploads/default-user.png';
     const displayAvatarSrc = editing && avatarPreview
         ? avatarPreview
-        : profile?.avatarUrl
-            ? `http://localhost:3000${profile.avatarUrl}`
-            : null;
+        : resolveMediaUrl(avatarUrlRaw);
 
-    const initial = profile?.username?.charAt(0).toUpperCase() || '?';
+    const initial = profile?.username?.charAt(0).toUpperCase() || user?.username?.charAt(0).toUpperCase() || '?';
 
     if (loading) {
         return (
@@ -130,9 +149,19 @@ export default function ProfilePage() {
                         title={editing ? 'Change profile picture' : undefined}
                     >
                         {displayAvatarSrc
-                            ? <img src={displayAvatarSrc} alt="avatar" className="avatar-img" />
-                            : <div className="avatar-placeholder">{initial}</div>
+                            ? <img
+                                src={displayAvatarSrc}
+                                alt="avatar"
+                                className="avatar-img"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    const placeholder = (e.target as HTMLImageElement).nextElementSibling as HTMLElement | null;
+                                    if (placeholder) placeholder.style.display = 'flex';
+                                }}
+                              />
+                            : null
                         }
+                        <div className="avatar-placeholder" style={{ display: displayAvatarSrc ? 'none' : 'flex' }}>{initial}</div>
                         {editing && (
                             <div className="avatar-overlay">
                                 <span className="avatar-overlay-icon">📷</span>

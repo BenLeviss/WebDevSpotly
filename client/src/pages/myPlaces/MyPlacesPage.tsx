@@ -5,6 +5,20 @@ import { postsApi } from '../../api/posts';
 import type { Post } from '../../api/posts';
 import { useAuth } from '../../context/AuthContext';
 
+const envApiUrl = import.meta.env.VITE_API_URL?.trim();
+const isDevelopment = import.meta.env.MODE === 'development';
+const backendBaseUrl = (isDevelopment
+    ? 'http://localhost:3000'
+    : (envApiUrl || window.location.origin))
+    .replace(/\/$/, '')
+    .replace(/\/api$/, '');
+
+const resolveMediaUrl = (value?: string | null) => {
+    if (!value) return null;
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+    return `${backendBaseUrl}${value}`;
+};
+
 // ─── PlaceGridItem ────────────────────────────────────────────────────────────
 
 interface PlaceGridItemProps {
@@ -32,11 +46,13 @@ function PlaceGridItem({ post, onEdit, onDelete }: PlaceGridItemProps) {
         return () => document.removeEventListener('mousedown', handleClick);
     }, [menuOpen]);
 
+    const imageUrl = resolveMediaUrl(post.imageUrl);
+
     return (
         <div className="place-grid-item">
             {/* Place image */}
             <img
-                src={post.imageUrl}
+                src={imageUrl ?? ''}
                 alt={post.title}
                 className="place-grid-image"
             />

@@ -294,7 +294,7 @@ const googleLogin = async (req: Request, res: Response) => {
                 avatarUrl: '/uploads/default-user.png',
                 refreshTokens: []
             });
-        } else if (!user.avatarUrl) {
+        } else if (!user.avatarUrl || user.avatarUrl === '/default-user.png') {
             user.avatarUrl = '/uploads/default-user.png';
             await user.save();
         }

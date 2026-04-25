@@ -7,7 +7,7 @@
         "dev": "nodemon server.ts",
         "build": "rimraf dist && tsc",
         "start": "node dist/server.js",
-        "test": "jest --runInBand",
+        "test": "tsc && jest --detectOpenHandles --forceExit",
         "test:watch": "jest --watch"
     },
     "dependencies": {

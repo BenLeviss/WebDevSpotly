@@ -9,9 +9,10 @@ import type { ParsedSearchQuery } from '../../api/aiSearch';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 const envApiUrl = import.meta.env.VITE_API_URL?.trim();
-const isLocalHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const isEnvLocalhost = !!envApiUrl && /localhost|127\.0\.0\.1/.test(envApiUrl);
-const backendBaseUrl = ((!isLocalHost && isEnvLocalhost) ? window.location.origin : (envApiUrl || (isLocalHost ? 'http://localhost:3000' : window.location.origin)))
+const isDevelopment = import.meta.env.MODE === 'development';
+const backendBaseUrl = (isDevelopment
+    ? 'http://localhost:3000'
+    : (envApiUrl || window.location.origin))
     .replace(/\/$/, '')
     .replace(/\/api$/, '');
 

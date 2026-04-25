@@ -5,6 +5,7 @@ import express, { Express } from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import swaggerUi from "swagger-ui-express";
 
 import postRouter from "./routes/posts";
@@ -34,10 +35,16 @@ const promise = new Promise<Express>((resolve, reject) => {
             app.use(express.json());
             app.use(express.urlencoded({ extended: true, limit: '11mb' }));
 
+            const uploadDirCandidates = [
+                path.join(__dirname, 'uploads'),      // prod build: server/dist/uploads
+                path.join(__dirname, '..', 'uploads') // dev ts-node: server/uploads
+            ];
+            const uploadsDir = uploadDirCandidates.find((dir) => fs.existsSync(dir)) || uploadDirCandidates[0];
+
             // Serve uploaded images as static files.
             // A saved path like "/uploads/photo-123.jpg" becomes accessible
             // at http://localhost:3000/uploads/photo-123.jpg
-            app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+            app.use('/uploads', express.static(uploadsDir));
 
             app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
             app.get("/api-docs.json", (_req, res) => {

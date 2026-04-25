@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "Node16",
     "esModuleInterop": true,
     "target": "es6",
     "moduleResolution": "node16",
@@ -8,7 +8,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
-    "types": ["jest", "node"],
+    "types": [ "node"],
     "skipLibCheck": true,
     "maxNodeModuleJsDepth": 0
   },

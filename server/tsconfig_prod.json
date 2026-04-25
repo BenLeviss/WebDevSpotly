@@ -8,11 +8,10 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
-    "types": [ "node"],
     "skipLibCheck": true,
     "maxNodeModuleJsDepth": 0
   },
   "lib": ["es2015"],
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"] 
+  "exclude": ["node_modules", "dist", "tests"]
 }

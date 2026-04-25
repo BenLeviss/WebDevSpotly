@@ -49,7 +49,6 @@ const promise = new Promise<Express>((resolve, reject) => {
             app.use("/comment", commentRouter);
             app.use("/user", userRouter);
             app.use("/ai", aiSearchRouter);
-            app.use('/uploads', express.static('uploads'));
             
             resolve(app);
         })

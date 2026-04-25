@@ -23,7 +23,7 @@ const promise = new Promise<Express>((resolve, reject) => {
     mongoose
         .connect(process.env.DATABASE_URL || "")
         .then(() => {
-            console.log("pass mongo connect");
+            console.log("Connected to MongoDB successfully");
             const app = express();
 
             // Enable CORS for the React frontend

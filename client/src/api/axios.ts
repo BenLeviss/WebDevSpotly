@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { triggerAuthExpired } from '../context/AuthContext';
 
-const apiBaseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const envApiUrl = import.meta.env.VITE_API_URL?.trim();
+const isLocalHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const apiBaseURL = envApiUrl || (isLocalHost ? 'http://localhost:3000' : window.location.origin);
 
 const api = axios.create({
-    baseURL: `${apiBaseURL}/api`,
+    baseURL: `${apiBaseURL.replace(/\/$/, '')}/api`,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -39,7 +41,7 @@ api.interceptors.response.use(
                 const refreshToken = localStorage.getItem('refreshToken');
                 if (!refreshToken) throw new Error('No refresh token');
 
-                const response = await axios.post('/api/auth/refresh', null, {
+                const response = await api.post('/auth/refresh', {}, {
                     headers: { Authorization: `Bearer ${refreshToken}` }
                 });
 

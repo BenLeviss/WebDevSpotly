@@ -291,11 +291,11 @@ const googleLogin = async (req: Request, res: Response) => {
                 username,
                 email: payload.email,
                 password: generatedPassword,
-                avatarUrl: payload.picture ?? undefined,
+                avatarUrl: '/default-user.png',
                 refreshTokens: []
             });
-        } else if (payload.picture && !user.avatarUrl) {
-            user.avatarUrl = payload.picture;
+        } else if (!user.avatarUrl) {
+            user.avatarUrl = '/default-user.png';
             await user.save();
         }
 

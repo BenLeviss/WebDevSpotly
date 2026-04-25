@@ -1,11 +1,11 @@
 import request from "supertest";
 import { Request, Response } from "express";
-import authRouter from "../routes/auth";
-import authController from "../controllers/auth";
-import { authenticate } from "../middleware/auth";
+import authRouter from "../src/routes/auth";
+import authController from "../src/controllers/auth";
+import { authenticate } from "../src/middleware/auth";
 import { attachDefaultGuardBehavior, createTestApp } from "./helpers/testApp";
 
-jest.mock("../controllers/auth", () => ({
+jest.mock("../src/controllers/auth", () => ({
     __esModule: true,
     default: {
         register: jest.fn(),
@@ -16,7 +16,7 @@ jest.mock("../controllers/auth", () => ({
     },
 }));
 
-jest.mock("../middleware/auth", () => ({
+jest.mock("../src/middleware/auth", () => ({
     authenticate: jest.fn(),
 }));
 

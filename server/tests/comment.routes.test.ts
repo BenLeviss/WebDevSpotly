@@ -1,11 +1,11 @@
 import request from "supertest";
 import { Request, Response } from "express";
-import commentRouter from "../routes/comment";
-import commentController from "../controllers/comment";
-import { authenticate } from "../middleware/auth";
+import commentRouter from "../src/routes/comment";
+import commentController from "../src/controllers/comment";
+import { authenticate } from "../src/middleware/auth";
 import { attachDefaultGuardBehavior, createTestApp } from "./helpers/testApp";
 
-jest.mock("../controllers/comment", () => ({
+jest.mock("../src/controllers/comment", () => ({
     __esModule: true,
     default: {
         createComment: jest.fn(),
@@ -17,7 +17,7 @@ jest.mock("../controllers/comment", () => ({
     },
 }));
 
-jest.mock("../middleware/auth", () => ({
+jest.mock("../src/middleware/auth", () => ({
     authenticate: jest.fn(),
 }));
 

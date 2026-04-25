@@ -1,16 +1,16 @@
 import request from "supertest";
 import { Request, Response } from "express";
-import userRouter from "../routes/user";
-import userController from "../controllers/user";
-import { authenticate } from "../middleware/auth";
-import { uploadImage } from "../middleware/upload";
+import userRouter from "../src/routes/user";
+import userController from "../src/controllers/user";
+import { authenticate } from "../src/middleware/auth";
+import { uploadImage } from "../src/middleware/upload";
 import {
     attachDefaultGuardBehavior,
     attachDefaultUploadBehavior,
     createTestApp,
 } from "./helpers/testApp";
 
-jest.mock("../controllers/user", () => ({
+jest.mock("../src/controllers/user", () => ({
     __esModule: true,
     default: {
         createUser: jest.fn(),
@@ -23,11 +23,11 @@ jest.mock("../controllers/user", () => ({
     },
 }));
 
-jest.mock("../middleware/auth", () => ({
+jest.mock("../src/middleware/auth", () => ({
     authenticate: jest.fn(),
 }));
 
-jest.mock("../middleware/upload", () => ({
+jest.mock("../src/middleware/upload", () => ({
     uploadImage: jest.fn(),
 }));
 

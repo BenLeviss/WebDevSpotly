@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { parseSearchQuery } from "../services/aiSearch";
+import { reindexAllPlaceEmbeddings, semanticSearchPlaces } from "../services/semanticSearch";
 
 /**
  * POST /ai/parse-query
@@ -65,5 +66,50 @@ export const parseQuery = async (req: Request, res: Response) => {
         }
 
         return res.status(500).json({ error: "Internal server error", details: message });
+    }
+};
+
+/**
+ * POST /ai/semantic-search
+ * Body: { query: string }
+ * Returns top similar places (semantic similarity).
+ */
+export const semanticSearch = async (req: Request, res: Response) => {
+    const { query } = req.body as { query?: string };
+
+    if (!query || typeof query !== "string" || query.trim().length === 0) {
+        return res.status(400).json({ error: "Missing required field: query (string)" });
+    }
+
+    try {
+        const results = await semanticSearchPlaces(query.trim(), 5);
+        if (results.length === 0) {
+            return res.json({
+                results: [],
+                message: "No good semantic matches found."
+            });
+        }
+
+        return res.json({ results });
+    } catch (err: unknown) {
+        const message = (err as Error).message ?? "Unknown error";
+        if (message.includes("OPENAI_API_KEY")) {
+            return res.status(500).json({ error: "AI service is not configured on the server." });
+        }
+        return res.status(500).json({ error: "Internal server error", details: message });
+    }
+};
+
+/**
+ * POST /ai/reindex-place-embeddings
+ * Rebuilds embeddings for all existing places.
+ */
+export const reindexPlaceEmbeddings = async (_req: Request, res: Response) => {
+    try {
+        const indexed = await reindexAllPlaceEmbeddings();
+        return res.json({ message: "Place embeddings reindexed", indexed });
+    } catch (err: unknown) {
+        const message = (err as Error).message ?? "Unknown error";
+        return res.status(500).json({ error: "Failed to reindex embeddings", details: message });
     }
 };

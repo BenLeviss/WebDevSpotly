@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Post from "../models/post";
+import { deletePlaceEmbedding, upsertPlaceEmbedding } from "../services/semanticSearch";
 
 /** Locally typed authenticated request — user is set by the authenticate middleware. */
 type RequestWithUser = Request & { user: { userId: string; username: string; email: string } };
@@ -46,6 +47,15 @@ const createPost = async (req: Request, res: Response) => {
             imageUrl,
             userId: user.userId,
         });
+
+        // Keep semantic-search embedding in sync with the created place.
+        await upsertPlaceEmbedding(
+            String(post._id),
+            String(post.title || ""),
+            String(post.category || ""),
+            String(post.content || "")
+        );
+
         res.status(201).send(post);
     } catch (error) {
         res.status(400).send((error as Error).message);
@@ -138,6 +148,16 @@ const updatePostById = async (req: Request, res: Response) => {
             { returnDocument: 'after', runValidators: true }
         );
 
+        if (updatedPost) {
+            // Keep semantic-search embedding in sync after edit.
+            await upsertPlaceEmbedding(
+                String(updatedPost._id),
+                String(updatedPost.title || ""),
+                String(updatedPost.category || ""),
+                String(updatedPost.content || "")
+            );
+        }
+
         res.send(updatedPost);
     } catch (error) {
         res.status(400).send((error as Error).message);
@@ -158,6 +178,13 @@ const deletePostById = async (req: Request, res: Response) => {
         }
 
         await Post.findByIdAndDelete(req.params.postId);
+
+        // Remove embedding when place is deleted.
+        const postId = Array.isArray(req.params.postId)
+            ? req.params.postId[0]
+            : req.params.postId;
+        await deletePlaceEmbedding(postId);
+
         res.send({ message: "Post deleted successfully" });
     } catch (error) {
         res.status(400).send((error as Error).message);

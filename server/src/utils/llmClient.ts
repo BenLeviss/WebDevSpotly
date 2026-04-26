@@ -45,3 +45,22 @@ export const chatComplete = async (
         throw err;
     }
 };
+
+/**
+ * Create embeddings for one or more texts.
+ */
+export const createEmbeddings = async (
+    input: string[],
+    model = "text-embedding-3-small"
+): Promise<number[][]> => {
+    const client = getLLMClient();
+
+    if (input.length === 0) return [];
+
+    const response = await client.embeddings.create({
+        model,
+        input
+    });
+
+    return response.data.map((item) => item.embedding);
+};

@@ -32,9 +32,18 @@ interface RAGChunk {
 
 const CHUNK_WORDS = 80;
 const CHUNK_OVERLAP = 20;
-const MAX_POSTS_FOR_RETRIEVAL = 120;
-const MAX_CHUNKS_FOR_EMBEDDING = 220;
+const MAX_POSTS_FOR_RETRIEVAL = 100;
+const MAX_CHUNKS_FOR_EMBEDDING = 100;
 const TOP_K = 8;
+const CORPUS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface CorpusCache {
+    chunks: RAGChunk[];
+    embeddings: number[][];
+    expiresAt: number;
+}
+
+let _corpusCache: CorpusCache | null = null;
 
 // ── System prompt ────────────────────────────────────────────────────────────
 
@@ -128,16 +137,27 @@ const buildChunkCorpus = async (): Promise<RAGChunk[]> => {
     return chunks;
 };
 
+const getCachedCorpus = async (): Promise<{ chunks: RAGChunk[]; embeddings: number[][] }> => {
+    const now = Date.now();
+    if (_corpusCache && _corpusCache.expiresAt > now) {
+        return { chunks: _corpusCache.chunks, embeddings: _corpusCache.embeddings };
+    }
+    const chunks = await buildChunkCorpus();
+    if (chunks.length === 0) return { chunks: [], embeddings: [] };
+    const embeddings = await createEmbeddings(chunks.map((c) => c.text));
+    _corpusCache = { chunks, embeddings, expiresAt: now + CORPUS_CACHE_TTL_MS };
+    return { chunks, embeddings };
+};
+
 const retrieveRelevantChunks = async (query: string): Promise<RAGChunk[]> => {
-    const corpus = await buildChunkCorpus();
-    if (corpus.length === 0) return [];
+    const { chunks, embeddings } = await getCachedCorpus();
+    if (chunks.length === 0) return [];
 
     const queryEmbedding = (await createEmbeddings([query]))[0];
-    const chunkEmbeddings = await createEmbeddings(corpus.map((c) => c.text));
 
-    const scored = corpus.map((chunk, idx) => ({
+    const scored = chunks.map((chunk, idx) => ({
         chunk,
-        score: cosineSimilarity(queryEmbedding, chunkEmbeddings[idx])
+        score: cosineSimilarity(queryEmbedding, embeddings[idx])
     }));
 
     return scored
@@ -157,19 +177,31 @@ export const parseSearchQuery = async (query: string): Promise<ParsedQuery> => {
             .join("\n")
         : "No matching post context was retrieved.";
 
-    const raw = await chatComplete([
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
         { role: "system", content: SYSTEM_PROMPT },
         {
             role: "user",
             content: `Query: ${query}\n\nRetrieved context chunks:\n${retrievalContext}`
         }
-    ]);
+    ];
 
     let parsed: unknown;
-    try {
-        parsed = JSON.parse(raw);
-    } catch {
-        throw new Error("LLM returned invalid JSON: " + raw.slice(0, 200));
+    let lastError = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const raw = await chatComplete(messages);
+        try {
+            parsed = JSON.parse(raw);
+            break;
+        } catch {
+            lastError = raw.slice(0, 200);
+            if (attempt === 0) {
+                messages.push({ role: "assistant", content: raw });
+                messages.push({ role: "user", content: "Your response was not valid JSON. Return ONLY the JSON object, no other text." });
+            }
+        }
+    }
+    if (parsed === undefined) {
+        throw new Error("LLM returned invalid JSON: " + lastError);
     }
 
     const result = ParsedQuerySchema.safeParse(parsed);

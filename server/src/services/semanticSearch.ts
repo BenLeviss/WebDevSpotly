@@ -3,7 +3,8 @@ import PlaceEmbedding from "../models/placeEmbedding";
 import { createEmbeddings } from "../utils/llmClient";
 
 const TOP_K = 5;
-const MIN_SIMILARITY = 0.2;
+const MIN_SIMILARITY = 0.25;
+const REINDEX_BATCH_SIZE = 50;
 const CHUNK_WORDS = 80;
 const CHUNK_OVERLAP = 20;
 
@@ -118,17 +119,36 @@ export const deletePlaceEmbedding = async (placeId: string): Promise<void> => {
  * Rebuild embeddings for all existing places.
  */
 export const reindexAllPlaceEmbeddings = async (): Promise<number> => {
-    const posts = await Post.find({}, "title category content").lean();
+    const posts = await Post.find({}, "title category content").lean() as Array<{
+        _id: unknown; title?: string; category?: string; content?: string;
+    }>;
     let indexed = 0;
 
-    for (const post of posts as Array<{ _id: unknown; title?: string; category?: string; content?: string }>) {
-        await upsertPlaceEmbedding(
-            String(post._id),
-            post.title || "",
-            post.category || "",
-            post.content || ""
+    for (let i = 0; i < posts.length; i += REINDEX_BATCH_SIZE) {
+        const batch = posts.slice(i, i + REINDEX_BATCH_SIZE);
+        const searchableTexts = batch.map((p) =>
+            buildSearchableText(p.title || "", p.category || "", p.content || "")
         );
-        indexed += 1;
+        const embeddings = await createEmbeddings(searchableTexts);
+
+        await Promise.all(
+            batch.map((post, idx) =>
+                PlaceEmbedding.findOneAndUpdate(
+                    { placeId: String(post._id) },
+                    {
+                        placeId: String(post._id),
+                        placeName: post.title || "",
+                        category: post.category || "",
+                        description: post.content || "",
+                        searchableText: searchableTexts[idx],
+                        embedding: embeddings[idx]
+                    },
+                    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+                )
+            )
+        );
+
+        indexed += batch.length;
     }
 
     return indexed;
@@ -159,9 +179,9 @@ export const semanticSearchPlaces = async (
                 similarity: cosineSimilarity(queryVec, embedding)
             };
         })
+        .filter((item) => item.similarity >= MIN_SIMILARITY)
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, topK)
-        .filter((item) => item.similarity >= MIN_SIMILARITY)
         .map((item) => ({
             ...item,
             similarity: Number(item.similarity.toFixed(4))

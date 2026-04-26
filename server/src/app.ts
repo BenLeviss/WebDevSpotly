@@ -56,11 +56,11 @@ const promise = new Promise<Express>((resolve, reject) => {
                 res.json(swaggerSpec);
             });
 
-            app.use("/auth", authRouter);
-            app.use("/post", postRouter);
-            app.use("/comment", commentRouter);
-            app.use("/user", userRouter);
-            app.use("/ai", aiSearchRouter);
+            app.use("/api/auth", authRouter);
+            app.use("/api/post", postRouter);
+            app.use("/api/comment", commentRouter);
+            app.use("/api/user", userRouter);
+            app.use("/api/ai", aiSearchRouter);
             
             resolve(app);
         })

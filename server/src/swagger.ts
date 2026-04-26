@@ -7,11 +7,11 @@ const swaggerSpec = {
     },
     servers: [
         {
-            url: "http://localhost:3000",
+            url: "http://localhost:3000/api",
             description: "Local development server",
         },
         {
-            url: "https://node19.cs.colman.ac.il:4000",
+            url: "https://node19.cs.colman.ac.il:4000/api",
             description: "Production backend server",
         },
     ],

@@ -6,4 +6,9 @@ module.exports = {
     clearMocks: true,
     restoreMocks: true,
     moduleFileExtensions: ['ts', 'js', 'json'],
+    globals: {
+        'ts-jest': {
+            tsconfig: '<rootDir>/tsconfig.test.json',
+        },
+    },
 };

@@ -1,21 +1,17 @@
 import api from './axios';
 
-export interface ParsedSearchFilters {
-    category?: string | null;
-    keywordsInclude: string[];
-    keywordsExclude: string[];
-    tags: string[];
-    sort?: 'newest' | 'oldest' | 'mostLiked' | 'relevance' | null;
+export interface SemanticSearchResult {
+    placeId: string;
+    placeName: string;
+    similarity: number;
 }
 
-export interface ParsedSearchQuery {
-    normalizedQuery: string;
-    filters: ParsedSearchFilters;
-    confidence: number;
-    warnings: string[];
+export interface SemanticSearchResponse {
+    results: SemanticSearchResult[];
+    message: string;
 }
 
 export const aiSearchApi = {
-    parseQuery: (query: string) =>
-        api.post<ParsedSearchQuery>('/ai/parse-query', { query }),
+    semanticSearch: (query: string) =>
+        api.post<SemanticSearchResponse>('/ai/semantic-search', { query }),
 };

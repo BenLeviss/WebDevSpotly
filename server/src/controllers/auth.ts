@@ -279,6 +279,7 @@ const googleLogin = async (req: Request, res: Response) => {
             audience: process.env.GOOGLE_CLIENT_ID
         });
 
+        // The payload contains the user's Google account info. We use the email as a unique identifier.
         const payload = ticket.getPayload();
 
         if (!payload?.email || !payload.email_verified) {

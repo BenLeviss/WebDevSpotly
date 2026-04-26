@@ -10,14 +10,14 @@ import MyPlacesPage from './pages/myPlaces/MyPlacesPage';
 import EditPlacePage from './pages/editPlace/EditPlacePage';
 import PostCommentsPage from './pages/postComments/PostCommentsPage';
 
-// 🔐 ProtectedRoute — only lets logged-in users through.
+// ProtectedRoute — only lets logged-in users through.
 //    If not logged in (no user OR no token) → sends them to /login.
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, accessToken } = useAuth();
   return user && accessToken ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
-// 🔓 PublicRoute — only renders for guests (not logged in).
+// PublicRoute — only renders for guests (not logged in).
 //    If already logged in → sends them to / (home).
 //    This prevents a logged-in user from seeing the login/register page.
 function PublicRoute({ children }: { children: React.ReactNode }) {

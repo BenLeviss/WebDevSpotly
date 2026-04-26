@@ -5,7 +5,6 @@ import { postsApi } from '../../api/posts';
 import type { Post } from '../../api/posts';
 import { useAuth } from '../../context/AuthContext';
 import { aiSearchApi } from '../../api/aiSearch';
-import type { ParsedSearchQuery } from '../../api/aiSearch';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 const envApiUrl = import.meta.env.VITE_API_URL?.trim();
@@ -37,73 +36,6 @@ function timeAgo(dateStr: string): string {
     return `${days}d ago`;
 }
 
-function buildSearchText(post: Post): string {
-    const userObj = typeof post.userId === 'object' && post.userId !== null
-        ? post.userId
-        : { username: '' };
-
-    return [
-        post.title,
-        post.content,
-        post.category,
-        userObj.username,
-    ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-}
-
-function applyAiFilters(posts: Post[], parsed: ParsedSearchQuery): Post[] {
-    const { filters } = parsed;
-    const include = (filters.keywordsInclude ?? []).map(k => k.toLowerCase()).filter(Boolean);
-    const exclude = (filters.keywordsExclude ?? []).map(k => k.toLowerCase()).filter(Boolean);
-    const tags = (filters.tags ?? []).map(t => t.toLowerCase()).filter(Boolean);
-    const category = filters.category?.toLowerCase() || null;
-
-    const filtered = posts.filter((post) => {
-        const text = buildSearchText(post);
-        const postCategory = (post.category || '').toLowerCase();
-
-        if (category && postCategory !== category) return false;
-
-        if (include.length > 0 && !include.every((kw) => text.includes(kw))) return false;
-
-        if (exclude.some((kw) => text.includes(kw))) return false;
-
-        if (tags.length > 0 && !tags.every((tag) => text.includes(tag))) return false;
-
-        return true;
-    });
-
-    const sorted = [...filtered];
-    switch (filters.sort) {
-        case 'newest':
-            sorted.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-            break;
-        case 'oldest':
-            sorted.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
-            break;
-        case 'mostLiked':
-            sorted.sort((a, b) => (b.likes?.length ?? 0) - (a.likes?.length ?? 0));
-            break;
-        case 'relevance': {
-            const relevanceTerms = [...include, ...tags];
-            sorted.sort((a, b) => {
-                const aText = buildSearchText(a);
-                const bText = buildSearchText(b);
-                const aScore = relevanceTerms.reduce((sum, term) => sum + (aText.includes(term) ? 1 : 0), 0);
-                const bScore = relevanceTerms.reduce((sum, term) => sum + (bText.includes(term) ? 1 : 0), 0);
-                if (bScore !== aScore) return bScore - aScore;
-                return +new Date(b.createdAt) - +new Date(a.createdAt);
-            });
-            break;
-        }
-        default:
-            break;
-    }
-
-    return sorted;
-}
 
 
 // ─── PlaceCard ────────────────────────────────────────────────────────────────
@@ -222,7 +154,6 @@ export default function HomePage() {
     const [aiQuery, setAiQuery] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
     const [aiApplied, setAiApplied] = useState(false);
-    const [aiResult, setAiResult] = useState<ParsedSearchQuery | null>(null);
     const [aiError, setAiError] = useState<string | null>(null);
 
     const PAGE_SIZE = 5;
@@ -250,7 +181,6 @@ export default function HomePage() {
         setPosts([]);
         setHasMore(true);
         setAiApplied(false);
-        setAiResult(null);
         setAiError(null);
         fetchFirstPage();
     }, [location.key, fetchFirstPage]);
@@ -296,13 +226,12 @@ export default function HomePage() {
         setError(null);
 
         try {
-            const [{ data: parsed }, { data: allPosts }] = await Promise.all([
-                aiSearchApi.parseQuery(query),
-                postsApi.getPosts(0, 100),
-            ]);
-
-            const filtered = applyAiFilters(allPosts, parsed);
-            setAiResult(parsed);
+            const { data } = await aiSearchApi.semanticSearch(query);
+            const resultMap = new Map(data.results.map(r => [r.placeId, r.similarity]));
+            const { data: allPosts } = await postsApi.getPosts(0, 100);
+            const filtered = allPosts
+                .filter(p => resultMap.has(p._id))
+                .sort((a, b) => (resultMap.get(b._id) ?? 0) - (resultMap.get(a._id) ?? 0));
             setPosts(filtered);
             setAiApplied(true);
             setHasMore(false);
@@ -316,7 +245,6 @@ export default function HomePage() {
     const clearAiSearch = useCallback(async () => {
         setAiQuery('');
         setAiApplied(false);
-        setAiResult(null);
         setAiError(null);
         await fetchFirstPage();
     }, [fetchFirstPage]);
@@ -392,12 +320,6 @@ export default function HomePage() {
                         </button>
                     )}
                 </div>
-
-                {aiResult && (
-                    <p className="home-ai-meta">
-                        <strong>AI:</strong> {aiResult.normalizedQuery} · confidence {Math.round(aiResult.confidence * 100)}%
-                    </p>
-                )}
 
                 {aiError && <div className="home-error">{aiError}</div>}
             </div>
